@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showSeasonManager, setShowSeasonManager] = useState(false)
   const [activeSeason, setActiveSeason] = useState<string | null>(null)
+  const [showSeasonConfig, setShowSeasonConfig] = useState(false)
+  const [configuringSeason, setConfiguringSeason] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -95,6 +97,7 @@ export default function AdminDashboard() {
   // ─── Season Management ────────────────────────────────────────────────────
 
   const applySeasonFilter = (seasonName: string, discount: number) => {
+    // Mantener el orden original de los tours al aplicar filtros
     const updatedTours = tourList.map(tour => {
       const tourSeasons = tour.seasons || []
       const hasThisSeason = tourSeasons.includes(seasonName)
@@ -117,34 +120,47 @@ export default function AdminDashboard() {
           price: newPriceStr,
           seasonalDiscount: discount
         }
+      } else {
+        // Deshabilitar paquetes que NO pertenecen a la temporada activa
+        return {
+          ...tour,
+          disabled: true
+        }
       }
-      
-      return tour
     })
     
-    saveTours(updatedTours)
+    // Guardar manteniendo el orden
+    setTourList(updatedTours)
+    localStorage.setItem('tours', JSON.stringify(updatedTours))
     setActiveSeason(seasonName)
     localStorage.setItem('activeSeason', seasonName)
+    localStorage.setItem('activeSeasonDiscount', discount.toString())
   }
 
   const removeSeasonFilter = () => {
     const updatedTours = tourList.map(tour => {
-      if (tour.originalPriceValue) {
-        return {
-          ...tour,
-          priceValue: tour.originalPriceValue,
-          price: tour.originalPrice || tour.price,
-          seasonalDiscount: undefined,
-          originalPrice: undefined,
-          originalPriceValue: undefined
-        }
+      // Restaurar precios originales
+      const updates: Partial<Tour> = {
+        disabled: false // Habilitar todos los paquetes
       }
-      return tour
+      
+      if (tour.originalPriceValue) {
+        updates.priceValue = tour.originalPriceValue
+        updates.price = tour.originalPrice || tour.price
+        updates.seasonalDiscount = undefined
+        updates.originalPrice = undefined
+        updates.originalPriceValue = undefined
+      }
+      
+      return { ...tour, ...updates }
     })
     
-    saveTours(updatedTours)
+    // Guardar manteniendo el orden
+    setTourList(updatedTours)
+    localStorage.setItem('tours', JSON.stringify(updatedTours))
     setActiveSeason(null)
     localStorage.removeItem('activeSeason')
+    localStorage.removeItem('activeSeasonDiscount')
   }
 
   const toggleSeasonForTour = (tourId: string, seasonName: string) => {
@@ -317,6 +333,10 @@ export default function AdminDashboard() {
                 discount={10}
                 isActive={activeSeason === 'Verano'}
                 onApply={(discount) => applySeasonFilter('Verano', discount)}
+                onConfigure={() => {
+                  setConfiguringSeason('Verano')
+                  setShowSeasonConfig(true)
+                }}
               />
               <SeasonCard
                 name="Invierno"
@@ -326,6 +346,10 @@ export default function AdminDashboard() {
                 discount={15}
                 isActive={activeSeason === 'Invierno'}
                 onApply={(discount) => applySeasonFilter('Invierno', discount)}
+                onConfigure={() => {
+                  setConfiguringSeason('Invierno')
+                  setShowSeasonConfig(true)
+                }}
               />
               <SeasonCard
                 name="Semana Santa"
@@ -335,6 +359,10 @@ export default function AdminDashboard() {
                 discount={5}
                 isActive={activeSeason === 'Semana Santa'}
                 onApply={(discount) => applySeasonFilter('Semana Santa', discount)}
+                onConfigure={() => {
+                  setConfiguringSeason('Semana Santa')
+                  setShowSeasonConfig(true)
+                }}
               />
               <SeasonCard
                 name="Fiestas Patrias"
@@ -344,6 +372,10 @@ export default function AdminDashboard() {
                 discount={8}
                 isActive={activeSeason === 'Fiestas Patrias'}
                 onApply={(discount) => applySeasonFilter('Fiestas Patrias', discount)}
+                onConfigure={() => {
+                  setConfiguringSeason('Fiestas Patrias')
+                  setShowSeasonConfig(true)
+                }}
               />
             </div>
           )}
@@ -416,6 +448,145 @@ export default function AdminDashboard() {
           }}
         />
       )}
+
+      {/* Season Configuration Modal */}
+      {showSeasonConfig && configuringSeason && (
+        <SeasonConfigModal
+          seasonName={configuringSeason}
+          tours={tourList}
+          onClose={() => {
+            setShowSeasonConfig(false)
+            setConfiguringSeason(null)
+          }}
+          onToggleTour={(tourId) => toggleSeasonForTour(tourId, configuringSeason)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Season Config Modal ──────────────────────────────────────────────────────
+
+interface SeasonConfigModalProps {
+  seasonName: string
+  tours: Tour[]
+  onClose: () => void
+  onToggleTour: (tourId: string) => void
+}
+
+function SeasonConfigModal({ seasonName, tours, onClose, onToggleTour }: SeasonConfigModalProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  
+  const filteredTours = tours.filter(t =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.location.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  
+  const toursInSeason = tours.filter(t => (t.seasons || []).includes(seasonName))
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Configurar Temporada: {seasonName}</h2>
+              <p className="text-purple-100 text-sm mt-1">
+                {toursInSeason.length} paquetes asignados a esta temporada
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar paquetes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            💡 Selecciona los paquetes que quieres activar cuando apliques esta temporada
+          </p>
+        </div>
+
+        {/* Tours List */}
+        <div className="overflow-y-auto max-h-[50vh] p-6">
+          <div className="grid grid-cols-1 gap-3">
+            {filteredTours.map(tour => {
+              const isInSeason = (tour.seasons || []).includes(seasonName)
+              return (
+                <div
+                  key={tour.id}
+                  onClick={() => onToggleTour(tour.id)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    isInSeason
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                        isInSeason ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {isInSeason ? '✓' : <Package className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 truncate">{tour.name}</h4>
+                        <p className="text-sm text-gray-500 flex items-center gap-2 mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          {tour.location}
+                          <span className="text-gray-300">•</span>
+                          {tour.region}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-purple-600">{tour.price}</p>
+                        <p className="text-xs text-gray-400">{tour.days}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">
+                {toursInSeason.length} de {tours.length} paquetes seleccionados
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Estos paquetes se activarán al aplicar la temporada "{seasonName}"
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Listo
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -531,9 +702,10 @@ interface SeasonCardProps {
   discount: number
   isActive: boolean
   onApply: (discount: number) => void
+  onConfigure: () => void
 }
 
-function SeasonCard({ name, icon, color, description, discount, isActive, onApply }: SeasonCardProps) {
+function SeasonCard({ name, icon, color, description, discount, isActive, onApply, onConfigure }: SeasonCardProps) {
   const [customDiscount, setCustomDiscount] = useState(discount)
 
   return (
@@ -571,17 +743,26 @@ function SeasonCard({ name, icon, color, description, discount, isActive, onAppl
           </div>
         </div>
 
-        <button
-          onClick={() => onApply(customDiscount)}
-          disabled={isActive}
-          className={`w-full py-2 rounded-lg font-semibold text-sm transition-all ${
-            isActive
-              ? 'bg-white/30 cursor-not-allowed'
-              : 'bg-white/90 hover:bg-white text-gray-900 hover:scale-105'
-          }`}
-        >
-          {isActive ? 'Ya aplicado' : 'Aplicar temporada'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onApply(customDiscount)}
+            disabled={isActive}
+            className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${
+              isActive
+                ? 'bg-white/30 cursor-not-allowed'
+                : 'bg-white/90 hover:bg-white text-gray-900 hover:scale-105'
+            }`}
+          >
+            {isActive ? 'Aplicada' : 'Aplicar'}
+          </button>
+          <button
+            onClick={onConfigure}
+            className="px-3 py-2 rounded-lg font-semibold text-sm bg-white/20 hover:bg-white/30 transition-all backdrop-blur-sm"
+            title="Configurar paquetes"
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -738,7 +919,8 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
           {/* TAB: ADVANCED DETAILS */}
           {activeFormTab === 'details' && (
             <AdvancedDetailsForm 
-              formData={formData} 
+              formData={formData}
+              setFormData={setFormData}
               addToArray={addToArray}
               removeFromArray={removeFromArray}
               updateArrayItem={updateArrayItem}
@@ -998,12 +1180,13 @@ function BasicInfoForm({ formData, setFormData }: BasicInfoFormProps) {
 
 interface AdvancedDetailsFormProps {
   formData: Partial<Tour>
+  setFormData: (data: Partial<Tour>) => void
   addToArray: (field: keyof Tour, value: string) => void
   removeFromArray: (field: keyof Tour, index: number) => void
   updateArrayItem: (field: keyof Tour, index: number, value: string) => void
 }
 
-function AdvancedDetailsForm({ formData, addToArray, removeFromArray, updateArrayItem }: AdvancedDetailsFormProps) {
+function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArray, updateArrayItem }: AdvancedDetailsFormProps) {
   const [newInclude, setNewInclude] = useState('')
   const [newNotInclude, setNewNotInclude] = useState('')
   const [newRecommendation, setNewRecommendation] = useState('')
@@ -1216,6 +1399,234 @@ function AdvancedDetailsForm({ formData, addToArray, removeFromArray, updateArra
               </button>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Opciones de Precio */}
+      <div className="border-t pt-6">
+        <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+          💰 Opciones de Precio
+        </h4>
+        <div className="space-y-3">
+          {(formData.priceOptions || []).map((option, i) => (
+            <div key={i} className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-gray-700">Opción {i + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = (formData.priceOptions || []).filter((_, idx) => idx !== i)
+                    setFormData({ ...formData, priceOptions: updated })
+                  }}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Etiqueta (Ej: Individual)"
+                  value={option.label}
+                  onChange={(e) => {
+                    const updated = [...(formData.priceOptions || [])]
+                    updated[i] = { ...updated[i], label: e.target.value }
+                    setFormData({ ...formData, priceOptions: updated })
+                  }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                />
+                <input
+                  type="text"
+                  placeholder="Precio (Ej: S/ 135)"
+                  value={option.price}
+                  onChange={(e) => {
+                    const updated = [...(formData.priceOptions || [])]
+                    updated[i] = { ...updated[i], price: e.target.value }
+                    setFormData({ ...formData, priceOptions: updated })
+                  }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Nota opcional (Ej: No válido feriados)"
+                value={option.note || ''}
+                onChange={(e) => {
+                  const updated = [...(formData.priceOptions || [])]
+                  updated[i] = { ...updated[i], note: e.target.value }
+                  setFormData({ ...formData, priceOptions: updated })
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const newOption = { label: '', price: '', note: '' }
+              setFormData({
+                ...formData,
+                priceOptions: [...(formData.priceOptions || []), newOption]
+              })
+            }}
+            className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-teal hover:text-brand-teal transition-colors text-sm font-semibold"
+          >
+            + Agregar opción de precio
+          </button>
+        </div>
+      </div>
+
+      {/* Puntos de Embarque */}
+      <div className="border-t pt-6">
+        <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+          📍 Puntos de Embarque
+        </h4>
+        <div className="space-y-3">
+          {(formData.boardingPoints || []).map((point, i) => (
+            <div key={i} className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-gray-700">Punto {i + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = (formData.boardingPoints || []).filter((_, idx) => idx !== i)
+                    setFormData({ ...formData, boardingPoints: updated })
+                  }}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder="Nombre (Ej: C.C. Plaza Norte)"
+                value={point.name}
+                onChange={(e) => {
+                  const updated = [...(formData.boardingPoints || [])]
+                  updated[i] = { ...updated[i], name: e.target.value }
+                  setFormData({ ...formData, boardingPoints: updated })
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+              <input
+                type="text"
+                placeholder="Dirección completa"
+                value={point.address}
+                onChange={(e) => {
+                  const updated = [...(formData.boardingPoints || [])]
+                  updated[i] = { ...updated[i], address: e.target.value }
+                  setFormData({ ...formData, boardingPoints: updated })
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+              <input
+                type="time"
+                value={point.time}
+                onChange={(e) => {
+                  const updated = [...(formData.boardingPoints || [])]
+                  updated[i] = { ...updated[i], time: e.target.value }
+                  setFormData({ ...formData, boardingPoints: updated })
+                }}
+                className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const newPoint = { name: '', address: '', time: '06:00' }
+              setFormData({
+                ...formData,
+                boardingPoints: [...(formData.boardingPoints || []), newPoint]
+              })
+            }}
+            className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-teal hover:text-brand-teal transition-colors text-sm font-semibold"
+          >
+            + Agregar punto de embarque
+          </button>
+        </div>
+      </div>
+
+      {/* Días de Salida y Retorno */}
+      <div className="border-t pt-6">
+        <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+          📅 Días de Salida y Retorno
+        </h4>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Días de salida (separados por coma)
+            </label>
+            <input
+              type="text"
+              placeholder="Ej: Sábados, Domingos, Feriados"
+              value={(formData.departureDays || []).join(', ')}
+              onChange={(e) => {
+                const days = e.target.value.split(',').map(d => d.trim()).filter(d => d)
+                setFormData({ ...formData, departureDays: days })
+              }}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Hora de retorno
+            </label>
+            <input
+              type="text"
+              placeholder="Ej: 08:00 pm aprox. (llegada a Lima)"
+              value={formData.returnTime || ''}
+              onChange={(e) => setFormData({ ...formData, returnTime: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Términos y Condiciones */}
+      <div className="border-t pt-6">
+        <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+          📋 Términos y Condiciones
+        </h4>
+        <div className="space-y-2">
+          {(formData.terms || []).map((term, i) => (
+            <div key={i} className="flex items-start gap-2 bg-gray-50 px-3 py-2 rounded-lg">
+              <span className="text-xs font-bold text-gray-400 mt-1 shrink-0">{i + 1}.</span>
+              <input
+                type="text"
+                value={term}
+                onChange={(e) => {
+                  const updated = [...(formData.terms || [])]
+                  updated[i] = e.target.value
+                  setFormData({ ...formData, terms: updated })
+                }}
+                className="flex-1 bg-transparent focus:outline-none text-sm"
+                placeholder="Término o condición"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = (formData.terms || []).filter((_, idx) => idx !== i)
+                  setFormData({ ...formData, terms: updated })
+                }}
+                className="text-red-500 hover:text-red-700 shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                ...formData,
+                terms: [...(formData.terms || []), '']
+              })
+            }}
+            className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-teal hover:text-brand-teal transition-colors text-sm font-semibold"
+          >
+            + Agregar término
+          </button>
         </div>
       </div>
     </div>
@@ -1452,6 +1863,310 @@ function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Image Folder Browser ─────────────────────────────────────────────────────
+
+// Carpetas de imágenes conocidas en /public
+const IMAGE_FOLDERS = [
+  'Autisha',
+  'AyacuchoSemanaSanta',
+  'CarnavalesCajamarca',
+  'Churin',
+  'Cusco',
+  'Huancaya',
+  'ICA',
+  'Laraos',
+  'LomasLachay',
+  'Lunahuana',
+  'MancoraAnoNuevo',
+  'NevadoRajuntay',
+  'NevadoRaura',
+  'Otao',
+  'OxapampaSelva',
+  'PlayaMina',
+  'TingoMaria',
+  'Vichaycocha'
+]
+
+interface ImageFolderBrowserProps {
+  formData: Partial<Tour>
+  setFormData: (data: Partial<Tour>) => void
+}
+
+function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) {
+  const [selectedFolder, setSelectedFolder] = useState<string>('')
+  const [availableImages, setAvailableImages] = useState<string[]>([])
+  const [newFolderName, setNewFolderName] = useState('')
+  const [customFolders, setCustomFolders] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const allFolders = [...IMAGE_FOLDERS, ...customFolders].sort()
+
+  // Cargar imágenes de una carpeta
+  const loadImagesFromFolder = async (folder: string) => {
+    setLoading(true)
+    try {
+      // Intentar cargar un índice de imágenes conocidas
+      // Como no podemos escanear directorios en el navegador, 
+      // vamos a intentar cargar imágenes con nombres comunes
+      const commonExtensions = ['jpg', 'jpeg', 'JPG', 'JPEG', 'png', 'PNG']
+      const commonNames = Array.from({ length: 30 }, (_, i) => i + 1)
+      
+      const possibleImages: string[] = []
+      
+      // Intentar cargar algunas imágenes conocidas
+      for (let ext of commonExtensions) {
+        for (let name of commonNames) {
+          const imagePath = `/${folder}/image${name}.${ext}`
+          possibleImages.push(imagePath)
+        }
+      }
+
+      // También intentar algunos patrones comunes de nombres
+      const patterns = [
+        'DSC_', 'IMG_', 'PXL_', 'G0', 'photo', 'image',
+        '332366821_', // Ejemplo de AyacuchoSemanaSanta
+      ]
+
+      for (let pattern of patterns) {
+        for (let i = 0; i < 20; i++) {
+          for (let ext of commonExtensions) {
+            possibleImages.push(`/${folder}/${pattern}${String(i).padStart(4, '0')}.${ext}`)
+          }
+        }
+      }
+
+      // Cargar la lista real si existe un manifest
+      const manifestPath = `/${folder}/manifest.json`
+      try {
+        const response = await fetch(manifestPath)
+        if (response.ok) {
+          const manifest = await response.json()
+          setAvailableImages(manifest.images.map((img: string) => `/${folder}/${img}`))
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        // No hay manifest, usar la lista generada
+      }
+
+      // Por defecto, mostrar algunas rutas probables
+      setAvailableImages(possibleImages.slice(0, 20))
+    } catch (error) {
+      console.error('Error loading images:', error)
+      setAvailableImages([])
+    }
+    setLoading(false)
+  }
+
+  const handleFolderSelect = (folder: string) => {
+    setSelectedFolder(folder)
+    loadImagesFromFolder(folder)
+  }
+
+  const addCustomFolder = () => {
+    if (newFolderName.trim() && !allFolders.includes(newFolderName.trim())) {
+      setCustomFolders([...customFolders, newFolderName.trim()])
+      setNewFolderName('')
+    }
+  }
+
+  const setAsCoverImage = (imagePath: string) => {
+    setFormData({ ...formData, image: imagePath })
+  }
+
+  const addToGallery = (imagePath: string) => {
+    const currentImages = formData.images || []
+    if (!currentImages.includes(imagePath)) {
+      setFormData({
+        ...formData,
+        images: [...currentImages, imagePath]
+      })
+    }
+  }
+
+  const quickAddAllToGallery = () => {
+    const validImages = availableImages.filter(img => {
+      // Solo agregar imágenes que probablemente existan
+      return true
+    })
+    const currentImages = formData.images || []
+    const newImages = validImages.filter(img => !currentImages.includes(img))
+    setFormData({
+      ...formData,
+      images: [...currentImages, ...newImages]
+    })
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200 mb-6">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center shrink-0">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-gray-900 mb-1">📂 Explorador de Carpetas de Imágenes</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Selecciona una carpeta existente o crea una nueva para organizar las imágenes del paquete
+          </p>
+
+          {/* Selector de carpeta */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">
+              Carpeta de imágenes
+            </label>
+            <select
+              value={selectedFolder}
+              onChange={(e) => handleFolderSelect(e.target.value)}
+              className="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+            >
+              <option value="">-- Seleccionar carpeta --</option>
+              {allFolders.map(folder => (
+                <option key={folder} value={folder}>{folder}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Crear nueva carpeta */}
+          <div className="bg-white/70 rounded-lg p-3 mb-4">
+            <p className="text-xs font-semibold text-gray-700 mb-2">O crear nueva carpeta</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addCustomFolder()
+                  }
+                }}
+                className="flex-1 px-3 py-2 border border-green-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="NombreCarpeta (sin espacios)"
+              />
+              <button
+                type="button"
+                onClick={addCustomFolder}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-semibold"
+              >
+                Crear
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Crea la carpeta en /public con este nombre y sube tus imágenes ahí
+            </p>
+          </div>
+
+          {/* Instrucciones si no hay carpeta seleccionada */}
+          {!selectedFolder && (
+            <div className="bg-white rounded-lg p-4 border-2 border-dashed border-green-300 text-center">
+              <svg className="w-12 h-12 text-green-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              <p className="text-sm text-gray-500">Selecciona una carpeta para ver sus imágenes</p>
+            </div>
+          )}
+
+          {/* Visor de imágenes */}
+          {selectedFolder && (
+            <div className="bg-white rounded-lg p-4 border border-green-200">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-gray-700">
+                  📁 /{selectedFolder}
+                </p>
+                <button
+                  type="button"
+                  onClick={quickAddAllToGallery}
+                  className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Agregar todas al carrusel
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Cargando imágenes...</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Haz clic en una imagen para establecerla como portada o agregarla al carrusel
+                  </p>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
+                    {availableImages.map((imagePath, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={imagePath}
+                          alt={`${selectedFolder} ${idx + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-green-500 transition-all cursor-pointer"
+                          onError={(e) => {
+                            // Si la imagen no existe, ocultarla
+                            (e.target as HTMLElement).style.display = 'none'
+                          }}
+                          onLoad={(e) => {
+                            // Si la imagen carga, mostrarla
+                            (e.target as HTMLElement).style.display = 'block'
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-1 p-1">
+                          <button
+                            type="button"
+                            onClick={() => setAsCoverImage(imagePath)}
+                            className="w-full px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition-colors"
+                            title="Establecer como portada"
+                          >
+                            📸 Portada
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addToGallery(imagePath)}
+                            className="w-full px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                            title="Agregar al carrusel"
+                          >
+                            ➕ Carrusel
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {availableImages.length === 0 && (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-gray-400">No se encontraron imágenes en esta carpeta</p>
+                      <p className="text-xs text-gray-400 mt-1">Sube imágenes a /public/{selectedFolder}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Preview de selección actual */}
+          {formData.image && (
+            <div className="mt-4 bg-purple-100 border border-purple-300 rounded-lg p-3">
+              <p className="text-xs font-bold text-purple-800 mb-2">✅ Portada seleccionada:</p>
+              <div className="flex items-center gap-2">
+                <img 
+                  src={formData.image} 
+                  alt="Portada" 
+                  className="w-16 h-16 object-cover rounded border-2 border-purple-400"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3E?%3C/text%3E%3C/svg%3E'
+                  }}
+                />
+                <p className="text-xs text-purple-700 font-mono">{formData.image}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1702,6 +2417,12 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
           </div>
         )}
       </div>
+
+      {/* Image Folder Browser */}
+      <ImageFolderBrowser 
+        formData={formData}
+        setFormData={setFormData}
+      />
 
       {/* Gallery Images */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">

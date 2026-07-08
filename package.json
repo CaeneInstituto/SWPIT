@@ -5,17 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.mjs",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-manifests": "node generate-manifests.mjs"
   },
   "dependencies": {
     "@types/react-router-dom": "^5.3.3",
+    "cors": "2.8.6",
+    "express": "5.2.1",
     "lucide-react": "^1.8.0",
+    "multer": "2.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/multer": "2.2.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",

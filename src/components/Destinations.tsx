@@ -211,9 +211,9 @@ export default function Destinations() {
             filtered.map((d) => (
               <div
                 key={d.id}
-                className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
+                className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col"
               >
-                <div className="relative overflow-hidden h-52">
+                <div className="relative overflow-hidden h-52 shrink-0">
                   <img
                     src={d.image}
                     alt={d.name}
@@ -223,19 +223,19 @@ export default function Destinations() {
                     {d.tag}
                   </span>
                 </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{d.name}</h3>
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-auto">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <h3 className="text-lg font-bold text-gray-900 line-clamp-2">{d.name}</h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                        <svg className="w-4 h-4 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-brand-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         {d.region}
                       </p>
                     </div>
-                    <span className="text-brand-yellow font-bold text-sm">{d.price}</span>
+                    <span className="text-brand-yellow font-bold text-sm shrink-0">{d.price}</span>
                   </div>
                   <div className="flex items-center justify-between mt-4 mb-4">
                     <span className="text-xs text-gray-400 flex items-center gap-1">

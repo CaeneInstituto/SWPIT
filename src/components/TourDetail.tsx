@@ -613,7 +613,7 @@ export default function TourDetail() {
                   <Phone className="w-3.5 h-3.5" />
                   +51 929 648 380 · +51 934 166 917
                 </p>
-                <p>✉️ Peruintravel.pe@gmail.com</p>
+                <p>✉️ peruintravel.pe@gmail.com</p>
                 <p className="text-white/50 text-center pt-1">Respuesta en menos de 24 horas</p>
               </div>
             </div>

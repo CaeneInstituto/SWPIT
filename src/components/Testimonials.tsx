@@ -1,26 +1,37 @@
 const testimonials = [
   {
-    name: 'María González', country: '🇪🇸 España',
+    name: 'María Fernández',
+    location: 'Lima',
     avatar: 'https://i.pravatar.cc/80?img=47',
-    text: 'El viaje a Machu Picchu fue absolutamente mágico. El guía conocía cada detalle histórico y los hoteles eran increíbles. Definitivamente repetiré.',
+    text: 'La atención fue excelente desde el primer momento. Organizaron todo nuestro viaje de manera profesional y disfrutamos de una experiencia inolvidable. Totalmente recomendados.',
     stars: 5,
   },
   {
-    name: 'James Carter', country: '🇺🇸 Estados Unidos',
+    name: 'José Rodríguez',
+    location: 'Arequipa',
     avatar: 'https://i.pravatar.cc/80?img=12',
-    text: 'Best travel agency I have ever used. The Amazon tour was life-changing. Everything was perfectly organized from start to finish.',
+    text: 'Muy satisfecho con el servicio. El equipo siempre estuvo pendiente de nosotros y cumplió con todo lo prometido. Sin duda volvería a viajar con Peru In Travel.',
     stars: 5,
   },
   {
-    name: 'Camille Dupont', country: '🇫🇷 Francia',
+    name: 'Carmen Huamán',
+    location: 'Cusco',
     avatar: 'https://i.pravatar.cc/80?img=32',
-    text: 'Le Lac Titicaca était époustouflant. L\'équipe de Peru In Travel a rendu ce voyage inoubliable. Je recommande vivement!',
+    text: 'Excelente organización y atención personalizada. Todo el itinerario estuvo muy bien coordinado y nos sentimos seguros durante todo el viaje.',
     stars: 5,
   },
   {
-    name: 'Lucas Oliveira', country: '🇧🇷 Brasil',
+    name: 'Luis Mendoza',
+    location: 'Trujillo',
     avatar: 'https://i.pravatar.cc/80?img=68',
-    text: 'Viagem incrível ao Cañón del Colca. Organização impecável, guias excelentes e preços justos. Voltarei com certeza!',
+    text: 'Una empresa muy seria y responsable. Los tours fueron puntuales, los guías muy amables y la experiencia superó nuestras expectativas.',
+    stars: 5,
+  },
+  {
+    name: 'Andrea Salazar',
+    location: 'Chiclayo',
+    avatar: 'https://i.pravatar.cc/80?img=25',
+    text: 'Fue una experiencia maravillosa. La comunicación fue rápida, el servicio de calidad y cada detalle estuvo perfectamente organizado. Los recomiendo al 100%.',
     stars: 5,
   },
 ]
@@ -47,20 +58,20 @@ export default function Testimonials() {
             Viajeros <span className="text-brand-teal">satisfechos</span>
           </h2>
           <p className="text-gray-500 mt-4 max-w-xl mx-auto">
-            Miles de viajeros de todo el mundo han confiado en nosotros. Aquí algunas de sus historias.
+            Miles de peruanos han confiado en nosotros para descubrir su propio país. Aquí algunas de sus historias.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {testimonials.map((t) => (
-            <div key={t.name} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+            <div key={t.name} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col">
               <Stars count={t.stars} />
-              <p className="text-gray-600 mt-4 text-sm leading-relaxed italic">"{t.text}"</p>
+              <p className="text-gray-600 mt-4 text-sm leading-relaxed italic flex-1">"{t.text}"</p>
               <div className="flex items-center gap-3 mt-5">
                 <img src={t.avatar} alt={t.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-brand-teal-l" />
                 <div>
                   <div className="font-semibold text-gray-900 text-sm">{t.name}</div>
-                  <div className="text-xs text-gray-400">{t.country}</div>
+                  <div className="text-xs text-gray-400">📍 {t.location}</div>
                 </div>
               </div>
             </div>

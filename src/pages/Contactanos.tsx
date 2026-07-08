@@ -189,8 +189,8 @@ export default function Contactanos() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Email</h3>
               <p className="text-gray-600 mb-4">Respuesta en 24 horas</p>
-              <a href="mailto:Peruintravel.pe@gmail.com" className="text-brand-teal font-semibold hover:underline">
-                Peruintravel.pe@gmail.com
+              <a href="mailto:peruintravel.pe@gmail.com" className="text-brand-teal font-semibold hover:underline">
+                peruintravel.pe@gmail.com
               </a>
             </div>
 

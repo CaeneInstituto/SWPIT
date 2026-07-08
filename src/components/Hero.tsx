@@ -85,7 +85,7 @@ export default function Hero() {
             Ver destinos
           </a>
           <a
-            href="#contacto"
+            href="/contactanos"
             className="bg-white/10 hover:bg-white/20 border border-white text-white font-bold px-8 py-4 rounded-full text-lg transition-colors backdrop-blur-sm"
           >
             Cotizar viaje

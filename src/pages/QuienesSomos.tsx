@@ -159,22 +159,169 @@ export default function QuienesSomos() {
         </div>
       </section>
 
-      {/* ── Misión y Visión ── */}
-      <section className="py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
-            <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-2xl font-extrabold text-gray-900 mb-3">Nuestra misión</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              Brindar experiencias de viaje auténticas, seguras y memorables que conecten a los viajeros con la riqueza natural, cultural e histórica del Perú, promoviendo el turismo responsable y el desarrollo de las comunidades locales.
-            </p>
+      {/* ── Misión, Visión y Valores ── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* Título de sección */}
+          <div className="text-center mb-14">
+            <span className="text-brand-teal font-semibold text-sm uppercase tracking-widest">Nuestra identidad</span>
+            <h2 className="text-4xl md:text-5xl font-extrabold mt-2 text-gray-900">
+              Misión, Visión y <span className="text-brand-teal">Objetivos</span>
+            </h2>
           </div>
-          <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
-            <div className="text-4xl mb-4">🌟</div>
-            <h3 className="text-2xl font-extrabold text-gray-900 mb-3">Nuestra visión</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              Ser el operador de turismo de referencia en Lima, reconocido por la calidad de nuestros paquetes, la calidez de nuestro equipo y el impacto positivo que generamos en cada destino que visitamos.
-            </p>
+
+          {/* Misión y Visión */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            {/* Misión */}
+            <div className="bg-gradient-to-br from-brand-teal/5 to-brand-teal/10 rounded-3xl p-8 border-2 border-brand-teal/20 hover:border-brand-teal/40 transition-all">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-14 h-14 bg-brand-teal rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+                  🎯
+                </div>
+                <h3 className="text-2xl font-extrabold text-gray-900">Misión</h3>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">
+                Brindar servicios turísticos de calidad, creando experiencias personalizadas que integren cultura, aventura y hospitalidad. En <strong>PERU IN TRAVEL</strong> nos comprometemos a promover el turismo responsable, la innovación en nuestras rutas y el crecimiento conjunto con nuestras comunidades aliadas.
+              </p>
+            </div>
+
+            {/* Visión */}
+            <div className="bg-gradient-to-br from-brand-yellow/5 to-brand-yellow/10 rounded-3xl p-8 border-2 border-brand-yellow/30 hover:border-brand-yellow/50 transition-all">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-14 h-14 bg-brand-yellow rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+                  🌟
+                </div>
+                <h3 className="text-2xl font-extrabold text-gray-900">Visión</h3>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">
+                Ser la agencia que conecta a cada viajero y turista con la esencia del Perú, creando recuerdos que trascienden y experiencias que inspiran a descubrir, amar y cuidar la riqueza cultural y natural de nuestro país.
+              </p>
+            </div>
+          </div>
+
+          {/* Objetivos */}
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl p-8 md:p-12 border-2 border-gray-200">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-14 h-14 bg-brand-dark rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+                📊
+              </div>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900">Objetivos</h3>
+            </div>
+
+            {/* Objetivos Generales */}
+            <div className="mb-10">
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 bg-brand-teal text-white rounded-lg flex items-center justify-center text-sm font-bold">G</span>
+                Objetivos Generales
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
+                  <span className="text-brand-teal font-bold text-lg shrink-0">1.</span>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    Consolidarse como una agencia de viajes confiable a nivel nacional, ofreciendo experiencias auténticas y personalizadas.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
+                  <span className="text-brand-teal font-bold text-lg shrink-0">2.</span>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    Incrementar la satisfacción del cliente mediante un servicio cercano, eficiente y de calidad.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
+                  <span className="text-brand-teal font-bold text-lg shrink-0">3.</span>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    Promover el turismo interno responsable, resaltando la cultura y naturaleza del Perú.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Objetivos Específicos */}
+            <div>
+              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 bg-brand-yellow text-white rounded-lg flex items-center justify-center text-sm font-bold">E</span>
+                Objetivos Específicos
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Objetivo 1 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      1
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Crecimiento comercial</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Aumentar las ventas en un 20% anual mediante la ampliación de rutas y paquetes turísticos.
+                  </p>
+                </div>
+
+                {/* Objetivo 2 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      2
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Experiencia del cliente</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Lograr un nivel de satisfacción superior al 90%, a través de atención personalizada y seguimiento post-viaje.
+                  </p>
+                </div>
+
+                {/* Objetivo 3 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      3
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Expansión de destinos</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Incorporar al menos 2 nuevos destinos o rutas cada año.
+                  </p>
+                </div>
+
+                {/* Objetivo 4 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      4
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Presencia digital</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Fortalecer redes sociales y canales digitales, aumentando la comunidad en un 30% anual.
+                  </p>
+                </div>
+
+                {/* Objetivo 5 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      5
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Accesibilidad</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Diseñar paquetes turísticos con precios competitivos, manteniendo una excelente relación calidad-precio.
+                  </p>
+                </div>
+
+                {/* Objetivo 6 */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
+                  <div className="flex items-start gap-3 mb-2">
+                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                      6
+                    </span>
+                    <h5 className="font-bold text-gray-900 text-sm">Alianzas estratégicas</h5>
+                  </div>
+                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
+                    Establecer convenios con proveedores (hoteles, guías, transporte) para mejorar la experiencia del viajero.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -41,7 +41,7 @@ export default function WhyUs() {
             <p className="text-white/75 mt-2">Contáctanos y diseñamos el viaje perfecto para ti.</p>
           </div>
           <a
-            href="#contacto"
+            href="/contactanos"
             className="shrink-0 bg-brand-yellow hover:bg-brand-yellow-d text-white font-bold px-8 py-4 rounded-full transition-colors shadow-lg"
           >
             Cotizar gratis
