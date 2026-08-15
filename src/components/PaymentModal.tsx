@@ -277,7 +277,7 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
   const [errorMsg, setErrorMsg]   = useState('')
   const [chargeId, setChargeId]   = useState('')
 
-  const reserveAmount    = totalPrice * 0.5
+  const reserveAmount    = totalPrice // 100% para tarjeta
   const reserveAmountStr = reserveAmount.toFixed(2)
 
   // Formateadores
@@ -292,17 +292,6 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
   }
   const formatCvv = (v: string) => v.replace(/\D/g, '').substring(0, 4)
 
-  // Cargar script Culqi dinámicamente
-  const loadCulqiScript = (): Promise<void> =>
-    new Promise((resolve, reject) => {
-      if ((window as any).Culqi) { resolve(); return }
-      const script = document.createElement('script')
-      script.src = 'https://checkout.culqi.com/js/v4'
-      script.onload  = () => resolve()
-      script.onerror = () => reject(new Error('No se pudo cargar Culqi.js'))
-      document.head.appendChild(script)
-    })
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.includes('@')) { setErrorMsg('Ingresa un email válido'); return }
@@ -310,32 +299,32 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
     setErrorMsg('')
 
     try {
-      await loadCulqiScript()
-      const CulqiSDK = (window as any).Culqi
-      CulqiSDK.publicKey = CULQI_PUBLIC_KEY
-
       const [expMonth, expYearShort] = expiryDate.split('/')
       const expYear = expYearShort ? `20${expYearShort}` : ''
 
-      const tokenData: any = await new Promise((resolve, reject) => {
-        CulqiSDK.createToken(
-          {
-            card_number:       cardNumber.replace(/\s/g, ''),
-            cvv,
-            expiration_month:  expMonth,
-            expiration_year:   expYear,
-            email,
-          },
-          (token: any) => {
-            if (token.object === 'error') {
-              reject(new Error(token.user_message || 'Error al procesar la tarjeta'))
-            } else {
-              resolve(token)
-            }
-          }
-        )
+      // Crear token directamente con la API de Culqi
+      const tokenResponse = await fetch('https://api.culqi.com/v2/tokens', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CULQI_PUBLIC_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          card_number: cardNumber.replace(/\s/g, ''),
+          cvv,
+          expiration_month: expMonth,
+          expiration_year: expYear,
+          email
+        })
       })
 
+      const tokenData = await tokenResponse.json()
+      
+      if (tokenData.object === 'error' || !tokenData.id) {
+        throw new Error(tokenData.merchant_message || tokenData.user_message || 'Error al procesar la tarjeta')
+      }
+
+      // Enviar token al backend para crear el cargo
       const response = await fetch(`${API_URL}/api/charge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -344,7 +333,7 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
           amount:      reserveAmount,
           email,
           description: tourNames.length ? `Reserva: ${tourNames.join(', ')}` : 'Reserva Peru In Travel',
-          metadata:    { paquetes: tourNames.join(' | '), tipo: '50% reserva' },
+          metadata:    { paquetes: tourNames.join(' | '), tipo: 'Pago completo' },
         }),
       })
 
@@ -511,17 +500,12 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
         </button>
       </form>
 
-      {/* Nota modo demo */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs">
-        <p className="font-bold text-amber-800 mb-1">⚙️ Activa tus claves Culqi</p>
-        <p className="text-amber-700">
-          Agrega <code className="bg-amber-100 px-1 rounded">VITE_CULQI_PUBLIC_KEY</code> y{' '}
-          <code className="bg-amber-100 px-1 rounded">CULQI_SECRET_KEY</code> en tu{' '}
-          <code className="bg-amber-100 px-1 rounded">.env</code> para cobros reales.{' '}
-          <a href="https://dashboard.culqi.com" target="_blank" rel="noopener noreferrer" className="font-bold underline">
-            dashboard.culqi.com
-          </a>
-        </p>
+      {/* Sello de confianza */}
+      <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs flex items-center gap-2">
+        <svg className="w-4 h-4 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+        </svg>
+        <p className="text-green-700">Pago seguro procesado por <strong>Culqi</strong> · Tu información está protegida</p>
       </div>
     </div>
   )

@@ -10,6 +10,8 @@ import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import PoliticaPrivacidad from './pages/PoliticaPrivacidad'
 import TerminosCondiciones from './pages/TerminosCondiciones'
+import PoliticasDevolucion from './pages/PoliticasDevolucion'
+import LibroReclamaciones from './pages/LibroReclamaciones'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -27,6 +29,8 @@ export default function App() {
             <Route path="/admin/dashboard"        element={<AdminDashboard />} />
             <Route path="/politica-de-privacidad" element={<PoliticaPrivacidad />} />
             <Route path="/terminos-y-condiciones" element={<TerminosCondiciones />} />
+            <Route path="/politicas-devolucion"   element={<PoliticasDevolucion />} />
+            <Route path="/libro-reclamaciones"    element={<LibroReclamaciones />} />
             <Route path="*"                       element={<NotFound />} />
           </Routes>
         </BrowserRouter>

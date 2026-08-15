@@ -92,11 +92,52 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
-            <p>© {new Date().getFullYear()} Peru In Travel. Todos los derechos reservados.</p>
-            <div className="flex gap-4">
-              <a href="/politica-de-privacidad" className="hover:text-white transition-colors">Política de privacidad</a>
-              <a href="/terminos-y-condiciones" className="hover:text-white transition-colors">Términos y condiciones</a>
+          <div className="border-t border-white/10 pt-6">
+            {/* Links legales destacados - Requisito CULQI */}
+            <div className="mb-6 pb-6 border-b border-white/10">
+              <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Información Legal</h4>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <a 
+                  href="/politica-de-privacidad" 
+                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                >
+                  <span className="text-lg">📋</span>
+                  <span>Política de Privacidad</span>
+                </a>
+                <a 
+                  href="/terminos-y-condiciones" 
+                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                >
+                  <span className="text-lg">📄</span>
+                  <span>Términos y Condiciones</span>
+                </a>
+                <a 
+                  href="/politicas-devolucion" 
+                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                >
+                  <span className="text-lg">🔄</span>
+                  <span>Políticas de Devolución</span>
+                </a>
+                <a 
+                  href="/libro-reclamaciones" 
+                  className="bg-red-600/20 hover:bg-red-600/30 border-2 border-red-500/50 hover:border-red-500 px-4 py-3 rounded-lg transition-all flex items-center gap-3 group"
+                >
+                  <img 
+                    src="/Libroreclamacion.jfif" 
+                    alt="Libro de Reclamaciones" 
+                    className="w-12 h-12 object-contain rounded bg-white/90 p-1"
+                  />
+                  <span className="text-sm font-bold text-white group-hover:scale-105 transition-transform text-left leading-tight">
+                    Libro de<br/>Reclamaciones
+                  </span>
+                </a>
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
+              <p>© {new Date().getFullYear()} Peru In Travel. Todos los derechos reservados. RUC: 20606474467</p>
+              <p className="text-white/30">Hecho con ❤️ en Perú</p>
             </div>
           </div>
         </div>
