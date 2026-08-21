@@ -1,4 +1,16 @@
-const testimonials = [
+import { useState, useEffect } from 'react'
+
+interface Testimonial {
+  _id?: string
+  name: string
+  location: string
+  avatar: string
+  text: string
+  stars: number
+}
+
+// Testimonios por defecto en caso de que la API falle
+const defaultTestimonials: Testimonial[] = [
   {
     name: 'María Fernández',
     location: 'Lima',
@@ -49,6 +61,43 @@ function Stars({ count }: { count: number }) {
 }
 
 export default function Testimonials() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchTestimonials()
+  }, [])
+
+  const fetchTestimonials = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/testimonials')
+      const data = await res.json()
+      
+      if (data.ok && data.testimonials.length > 0) {
+        setTestimonials(data.testimonials)
+      } else {
+        // Si no hay testimonios en DB, usar los por defecto
+        setTestimonials(defaultTestimonials)
+      }
+    } catch (err) {
+      console.error('Error cargando testimonios:', err)
+      // En caso de error, usar testimonios por defecto
+      setTestimonials(defaultTestimonials)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <section id="testimonios" className="py-24 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p className="text-gray-400">Cargando testimonios...</p>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section id="testimonios" className="py-24 bg-gray-50">
       <div className="max-w-6xl mx-auto px-4">
@@ -64,7 +113,7 @@ export default function Testimonials() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {testimonials.map((t) => (
-            <div key={t.name} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col">
+            <div key={t._id || t.name} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col">
               <Stars count={t.stars} />
               <p className="text-gray-600 mt-4 text-sm leading-relaxed italic flex-1">"{t.text}"</p>
               <div className="flex items-center gap-3 mt-5">

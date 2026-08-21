@@ -28,6 +28,8 @@ export default function PaymentModal({ onClose }: Props) {
   const [method, setMethod]     = useState<PaymentMethod>('yape')
   const [voucherNote, setVoucherNote] = useState('')
   const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [phone, setPhone]       = useState('')
 
   const methodLabels: Record<PaymentMethod, string> = {
     yape:     'Yape',
@@ -36,7 +38,35 @@ export default function PaymentModal({ onClose }: Props) {
     card:     'Tarjeta de crédito/débito',
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    // Preparar datos para guardar
+    const purchaseData = {
+      name: name || 'Sin especificar',
+      email: email || '',
+      phone: phone || '',
+      method: methodLabels[method],
+      tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
+      totalPersons: items.reduce((sum, item) => sum + item.quantity, 0),
+      travelDate: items.map(item => item.travelDate).join('; '),
+      totalPrice: totalPrice.toFixed(2),
+      reserveAmount: totalPrice.toFixed(2), // 100% del precio
+      paymentStatus: 'Pendiente confirmación',
+      note: voucherNote || '',
+      culqiId: ''
+    }
+
+    // Guardar en Excel
+    try {
+      await fetch(`${API_URL}/api/save-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(purchaseData)
+      })
+    } catch (error) {
+      console.error('Error guardando compra:', error)
+    }
+
+    // Construir mensaje de WhatsApp
     let message = `🌄 *Reserva Peru In Travel*\n\n`
     message += `👤 *Nombre:* ${name || '(sin especificar)'}\n`
     message += `💳 *Método de pago:* ${methodLabels[method]}\n\n`
@@ -48,7 +78,7 @@ export default function PaymentModal({ onClose }: Props) {
       message += `   Fecha: ${item.travelDate}\n`
       message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
-    message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n`
+    message += `💰 *Total a pagar: S/ ${totalPrice.toFixed(2)}*\n`
     if (voucherNote) message += `📎 *Nota:* ${voucherNote}\n`
     message += `\nPor favor confirmen la reserva. ¡Gracias! 🙏`
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
@@ -93,7 +123,7 @@ export default function PaymentModal({ onClose }: Props) {
           {/* STEP 1 – Elegir método */}
           {step === 'method' && (
             <div className="space-y-3">
-              <p className="text-gray-600 text-sm mb-4">Selecciona cómo realizarás el pago del 50% de reserva:</p>
+              <p className="text-gray-600 text-sm mb-4">Selecciona cómo realizarás el pago completo:</p>
               {(['yape', 'plin', 'card', 'transfer'] as PaymentMethod[]).map((m) => (
                 <button key={m} onClick={() => setMethod(m)}
                   className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
@@ -149,7 +179,7 @@ export default function PaymentModal({ onClose }: Props) {
                     <ol className="list-decimal list-inside space-y-1 text-yellow-700 mt-2">
                       <li>Abre tu app {method === 'yape' ? 'Yape' : 'Plin'}</li>
                       <li>Ingresa el número <strong>{method === 'yape' ? PAYMENT_INFO.yape.number : PAYMENT_INFO.plin.number}</strong></li>
-                      <li>Envía el <strong>50% (S/ {(totalPrice * 0.5).toFixed(2)})</strong> como reserva</li>
+                      <li>Envía <strong>S/ {totalPrice.toFixed(2)}</strong></li>
                       <li>Guarda el comprobante y continúa</li>
                     </ol>
                   </div>
@@ -173,7 +203,7 @@ export default function PaymentModal({ onClose }: Props) {
                     <div className="flex justify-between"><span className="text-gray-500">Titular:</span><span className="font-semibold">{PAYMENT_INFO.transfer.name}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">N° cuenta:</span><span className="font-semibold font-mono">{PAYMENT_INFO.transfer.account}</span></div>
                     <div className="flex justify-between"><span className="text-gray-500">CCI:</span><span className="font-semibold font-mono text-xs">{PAYMENT_INFO.transfer.cci}</span></div>
-                    <div className="flex justify-between border-t pt-2 mt-2"><span className="text-gray-500">Monto (50%):</span><span className="font-bold text-brand-teal">S/ {(totalPrice * 0.5).toFixed(2)}</span></div>
+                    <div className="flex justify-between border-t pt-2 mt-2"><span className="text-gray-500">Monto:</span><span className="font-bold text-brand-teal">S/ {totalPrice.toFixed(2)}</span></div>
                   </div>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800">
                     ⚠️ Realiza la transferencia y guarda tu voucher antes de continuar.
@@ -212,6 +242,16 @@ export default function PaymentModal({ onClose }: Props) {
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
                 </div>
                 <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Correo electrónico</label>
+                  <input type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Teléfono / WhatsApp</label>
+                  <input type="tel" placeholder="Ej: 929648380" value={phone} onChange={e => setPhone(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Nota del voucher (opcional)</label>
                   <input type="text" placeholder="Ej: N° operación 123456" value={voucherNote} onChange={e => setVoucherNote(e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
@@ -229,7 +269,7 @@ export default function PaymentModal({ onClose }: Props) {
                   <span>Total</span><span>S/ {totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-brand-teal font-semibold">
-                  <span>Reserva (50%)</span><span>S/ {(totalPrice * 0.5).toFixed(2)}</span>
+                  <span>Monto a pagar</span><span>S/ {totalPrice.toFixed(2)}</span>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -339,6 +379,32 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
 
       const result = await response.json()
       if (!response.ok || result.error) throw new Error(result.error || 'Error al procesar el pago')
+
+      // Guardar en Excel
+      const purchaseData = {
+        name: holderName || 'Sin especificar',
+        email,
+        method: 'Tarjeta de crédito/débito',
+        tours: tourNames.join('; '),
+        totalPersons: 1, // No tenemos este dato en el flujo de tarjeta
+        travelDate: '',
+        totalPrice: reserveAmount.toFixed(2),
+        reserveAmount: reserveAmount.toFixed(2),
+        paymentStatus: 'Pagado',
+        note: '',
+        phone: '',
+        culqiId: result.chargeId || ''
+      }
+
+      try {
+        await fetch(`${API_URL}/api/save-purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        })
+      } catch (error) {
+        console.error('Error guardando compra:', error)
+      }
 
       setChargeId(result.chargeId || 'culqi-' + Date.now())
       setStep('success')

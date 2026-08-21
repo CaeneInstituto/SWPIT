@@ -6,12 +6,24 @@ import { normalizeToTime24, normalizeActivities } from '../utils/timeFormat'
 import { 
   Plus, Edit2, Trash2, Eye, EyeOff, LogOut, Save, X, 
   Package, DollarSign, MapPin, Clock, Image as ImageIcon,
-  Sun, Snowflake, Leaf, Calendar as CalendarIcon, Percent, Tag
+  Sun, Snowflake, Leaf, Calendar as CalendarIcon, Percent, Tag,
+  MessageSquare, Database, ShoppingCart, Download
 } from 'lucide-react'
+
+interface Testimonial {
+  _id?: string
+  name: string
+  location: string
+  avatar: string
+  text: string
+  stars: number
+  createdAt?: Date
+}
 
 export default function AdminDashboard() {
   const { isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'tours' | 'testimonials' | 'purchases'>('tours')
   const [tourList, setTourList] = useState<Tour[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingTour, setEditingTour] = useState<Tour | null>(null)
@@ -20,6 +32,18 @@ export default function AdminDashboard() {
   const [activeSeason, setActiveSeason] = useState<string | null>(null)
   const [showSeasonConfig, setShowSeasonConfig] = useState(false)
   const [configuringSeason, setConfiguringSeason] = useState<string | null>(null)
+  
+  // Testimonials state
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false)
+  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
+  
+  // Purchases state
+  const [purchases, setPurchases] = useState<any[]>([])
+  const [loadingPurchases, setLoadingPurchases] = useState(false)
+  
+  // DB status
+  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -190,6 +214,134 @@ export default function AdminDashboard() {
     }
   }, [])
 
+  // Check DB status and load testimonials
+  useEffect(() => {
+    checkDBStatus()
+    if (activeTab === 'testimonials') {
+      loadTestimonials()
+    } else if (activeTab === 'purchases') {
+      loadPurchases()
+    }
+  }, [activeTab])
+
+  const checkDBStatus = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/health')
+      const data = await res.json()
+      setDbStatus(data.mongo?.includes('conectado') ? 'connected' : 'disconnected')
+    } catch {
+      setDbStatus('disconnected')
+    }
+  }
+
+  const loadTestimonials = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/api/testimonials')
+      const data = await res.json()
+      if (data.ok) {
+        setTestimonials(data.testimonials)
+      }
+    } catch (err) {
+      console.error('Error loading testimonials:', err)
+    }
+  }
+
+  const loadPurchases = async () => {
+    setLoadingPurchases(true)
+    try {
+      const res = await fetch('http://localhost:3001/api/compras')
+      const data = await res.json()
+      if (data.ok) {
+        setPurchases(data.compras)
+      }
+    } catch (err) {
+      console.error('Error loading purchases:', err)
+    } finally {
+      setLoadingPurchases(false)
+    }
+  }
+
+  const downloadPurchasesExcel = async () => {
+    try {
+      // Importar xlsx dinámicamente
+      const XLSX = await import('xlsx')
+      
+      // Preparar datos para Excel
+      const excelData = purchases.map((purchase, index) => ({
+        'N°': index + 1,
+        'ID de Cargo': purchase.chargeId || '',
+        'Fecha': purchase.createdAt ? new Date(purchase.createdAt).toLocaleString('es-PE') : '',
+        'Cliente': purchase.buyerName || 'No especificado',
+        'Email': purchase.email || '',
+        'Monto (PEN)': purchase.amount || 0,
+        'Estado': purchase.status || 'desconocido',
+        'Descripción': purchase.description || '',
+        'Tarjeta': purchase.card ? `${purchase.card.brand} ****${purchase.card.last4}` : 'N/A',
+        'País': purchase.card?.country || 'N/A',
+        'Items': purchase.items ? purchase.items.map((item: any) => item.name || item.description).join(', ') : '',
+        'Metadata': purchase.metadata ? JSON.stringify(purchase.metadata) : ''
+      }))
+
+      // Crear workbook y worksheet
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet(excelData)
+
+      // Configurar ancho de columnas
+      const colWidths = [
+        { wch: 5 },  // N°
+        { wch: 25 }, // ID de Cargo
+        { wch: 20 }, // Fecha
+        { wch: 25 }, // Cliente
+        { wch: 30 }, // Email
+        { wch: 12 }, // Monto
+        { wch: 12 }, // Estado
+        { wch: 40 }, // Descripción
+        { wch: 20 }, // Tarjeta
+        { wch: 10 }, // País
+        { wch: 50 }, // Items
+        { wch: 30 }  // Metadata
+      ]
+      ws['!cols'] = colWidths
+
+      // Agregar worksheet al workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Compras')
+
+      // Generar nombre de archivo con fecha actual
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS
+      const filename = `peru-in-travel-compras-${dateStr}-${timeStr}.xlsx`
+
+      // Descargar archivo
+      XLSX.writeFile(wb, filename)
+      
+      alert(`✅ Archivo descargado: ${filename}`)
+    } catch (error) {
+      console.error('Error downloading Excel:', error)
+      alert('❌ Error al descargar el archivo Excel')
+    }
+  }
+
+  const deleteTestimonial = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este testimonio?')) return
+    
+    try {
+      const res = await fetch(`http://localhost:3001/api/testimonials/${id}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      
+      if (data.ok) {
+        loadTestimonials()
+      } else {
+        alert('Error al eliminar testimonio')
+      }
+    } catch (err) {
+      console.error('Error deleting testimonial:', err)
+      alert('Error al eliminar testimonio')
+    }
+  }
+
   const handleLogout = () => {
     logout()
     navigate('/admin/login')
@@ -205,27 +357,51 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Panel de administración</h1>
-            <p className="text-sm text-gray-500">Gestiona tus paquetes turísticos</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Panel de administración</h1>
+              <p className="text-sm text-gray-500">Gestiona tu contenido</p>
+            </div>
+            {/* DB Status Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
+              <Database className="w-4 h-4 text-gray-600" />
+              <span className="text-xs font-medium text-gray-600">MongoDB:</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${
+                  dbStatus === 'connected' ? 'bg-green-500' :
+                  dbStatus === 'disconnected' ? 'bg-red-500' :
+                  'bg-gray-400 animate-pulse'
+                }`} />
+                <span className={`text-xs font-semibold ${
+                  dbStatus === 'connected' ? 'text-green-600' :
+                  dbStatus === 'disconnected' ? 'text-red-600' :
+                  'text-gray-500'
+                }`}>
+                  {dbStatus === 'connected' ? 'Conectado' :
+                   dbStatus === 'disconnected' ? 'Desconectado' :
+                   'Verificando...'}
+                </span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (window.confirm('¿Restablecer todos los paquetes a los datos originales? Esto eliminará todos los cambios guardados.')) {
-                  localStorage.removeItem('tours')
-                  // Forzar recarga de datos originales procesados
-                  window.location.reload()
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
-              title="Restablecer datos originales"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span className="hidden sm:inline text-sm">Restablecer</span>
-            </button>
+            {activeTab === 'tours' && (
+              <button
+                onClick={() => {
+                  if (window.confirm('¿Restablecer todos los paquetes a los datos originales? Esto eliminará todos los cambios guardados.')) {
+                    localStorage.removeItem('tours')
+                    window.location.reload()
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
+                title="Restablecer datos originales"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline text-sm">Restablecer</span>
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -235,51 +411,92 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+        
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-1 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('tours')}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'tours'
+                  ? 'text-brand-teal border-b-2 border-brand-teal'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Paquetes Turísticos
+            </button>
+            <button
+              onClick={() => setActiveTab('testimonials')}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'testimonials'
+                  ? 'text-brand-teal border-b-2 border-brand-teal'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Testimonios
+            </button>
+            <button
+              onClick={() => setActiveTab('purchases')}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all relative ${
+                activeTab === 'purchases'
+                  ? 'text-brand-teal border-b-2 border-brand-teal'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Compras
+            </button>
+          </div>
+        </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total de paquetes</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{tourList.length}</p>
+        {activeTab === 'tours' ? (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total de paquetes</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{tourList.length}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-brand-teal/10 rounded-full flex items-center justify-center">
+                    <Package className="w-6 h-6 text-brand-teal" />
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-brand-teal/10 rounded-full flex items-center justify-center">
-                <Package className="w-6 h-6 text-brand-teal" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Paquetes activos</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
-                  {tourList.filter(t => !t.disabled).length}
-                </p>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Paquetes activos</p>
+                    <p className="text-3xl font-bold text-green-600 mt-1">
+                      {tourList.filter(t => !t.disabled).length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <Eye className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Eye className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Paquetes deshabilitados</p>
-                <p className="text-3xl font-bold text-gray-400 mt-1">
-                  {tourList.filter(t => t.disabled).length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                <EyeOff className="w-6 h-6 text-gray-400" />
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Paquetes deshabilitados</p>
+                    <p className="text-3xl font-bold text-gray-400 mt-1">
+                      {tourList.filter(t => t.disabled).length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                    <EyeOff className="w-6 h-6 text-gray-400" />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
         {/* Season Manager */}
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 shadow-sm border border-purple-200 mb-6">
@@ -422,6 +639,274 @@ export default function AdminDashboard() {
             ))
           )}
         </div>
+          </>
+        ) : activeTab === 'testimonials' ? (
+          /* Testimonials View */
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total de testimonios</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{testimonials.length}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <MessageSquare className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Promedio de estrellas</p>
+                    <p className="text-3xl font-bold text-yellow-500 mt-1">
+                      {testimonials.length > 0 
+                        ? (testimonials.reduce((acc, t) => acc + t.stars, 0) / testimonials.length).toFixed(1)
+                        : '0'}
+                      <span className="text-lg">★</span>
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">⭐</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Gestiona los testimonios que aparecen en tu página web
+                </p>
+                <button
+                  onClick={() => setShowTestimonialForm(true)}
+                  className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Agregar testimonio
+                </button>
+              </div>
+            </div>
+
+            {/* Testimonials List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {testimonials.length === 0 ? (
+                <div className="col-span-2 bg-white rounded-xl p-12 shadow-sm border border-gray-200 text-center">
+                  <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No hay testimonios aún</p>
+                  <button
+                    onClick={() => setShowTestimonialForm(true)}
+                    className="mt-4 text-brand-teal hover:underline font-semibold"
+                  >
+                    Agregar el primero
+                  </button>
+                </div>
+              ) : (
+                testimonials.map((testimonial) => (
+                  <div
+                    key={testimonial._id}
+                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start gap-4 mb-4">
+                      <img
+                        src={testimonial.avatar}
+                        alt={testimonial.name}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                        <p className="text-sm text-gray-500">📍 {testimonial.location}</p>
+                        <div className="flex gap-0.5 mt-1">
+                          {Array.from({ length: testimonial.stars }).map((_, i) => (
+                            <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm italic mb-4">"{testimonial.text}"</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingTestimonial(testimonial)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => deleteTestimonial(testimonial._id!)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : activeTab === 'purchases' ? (
+          /* Purchases View */
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total de compras</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{purchases.length}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <ShoppingCart className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Ingresos totales</p>
+                    <p className="text-3xl font-bold text-green-600 mt-1">
+                      S/ {purchases.reduce((acc, p) => acc + (p.amount || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-yellow-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Compra promedio</p>
+                    <p className="text-3xl font-bold text-blue-600 mt-1">
+                      S/ {purchases.length > 0 ? Math.round(purchases.reduce((acc, p) => acc + (p.amount || 0), 0) / purchases.length) : 0}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">📊</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Gestión de Compras</h3>
+                  <p className="text-sm text-gray-600">
+                    Visualiza y descarga todas las compras realizadas por tus clientes
+                  </p>
+                </div>
+                <button
+                  onClick={downloadPurchasesExcel}
+                  disabled={purchases.length === 0}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                >
+                  <Download className="w-5 h-5" />
+                  Descargar Excel
+                </button>
+              </div>
+            </div>
+
+            {/* Purchases List */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              {loadingPurchases ? (
+                <div className="p-12 text-center">
+                  <div className="w-8 h-8 border-2 border-brand-teal border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Cargando compras...</p>
+                </div>
+              ) : purchases.length === 0 ? (
+                <div className="p-12 text-center">
+                  <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg font-semibold mb-2">No hay compras registradas</p>
+                  <p className="text-gray-400 text-sm">Las compras aparecerán aquí cuando los clientes realicen pagos</p>
+                </div>
+              ) : (
+                <>
+                  {/* Table Header */}
+                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-sm font-semibold text-gray-700">
+                      <div className="lg:col-span-2">Fecha</div>
+                      <div className="lg:col-span-2">Cliente</div>
+                      <div className="lg:col-span-2">Email</div>
+                      <div className="lg:col-span-1">Monto</div>
+                      <div className="lg:col-span-2">Paquete</div>
+                      <div className="lg:col-span-2">Tarjeta</div>
+                      <div className="lg:col-span-1">Estado</div>
+                    </div>
+                  </div>
+                  
+                  {/* Table Body */}
+                  <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                    {purchases.map((purchase, index) => (
+                      <div key={purchase._id || index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-sm">
+                          <div className="lg:col-span-2">
+                            <div className="font-medium text-gray-900">
+                              {purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString('es-PE') : 'N/A'}
+                            </div>
+                            <div className="text-gray-500 text-xs">
+                              {purchase.createdAt ? new Date(purchase.createdAt).toLocaleTimeString('es-PE') : ''}
+                            </div>
+                          </div>
+                          <div className="lg:col-span-2">
+                            <div className="font-medium text-gray-900">
+                              {purchase.buyerName || 'No especificado'}
+                            </div>
+                          </div>
+                          <div className="lg:col-span-2">
+                            <div className="text-gray-600 text-xs">
+                              {purchase.email || 'N/A'}
+                            </div>
+                          </div>
+                          <div className="lg:col-span-1">
+                            <span className="font-bold text-green-600">
+                              S/ {purchase.amount || 0}
+                            </span>
+                          </div>
+                          <div className="lg:col-span-2">
+                            <div className="text-gray-600 text-xs truncate" title={purchase.description}>
+                              {purchase.description || 'Sin descripción'}
+                            </div>
+                          </div>
+                          <div className="lg:col-span-2">
+                            {purchase.card ? (
+                              <div className="text-gray-600 text-xs">
+                                <div>{purchase.card.brand} ****{purchase.card.last4}</div>
+                                <div className="text-gray-400">{purchase.card.country || 'N/A'}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">N/A</span>
+                            )}
+                          </div>
+                          <div className="lg:col-span-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              purchase.status === 'venta' || purchase.status === 'successful' 
+                                ? 'bg-green-100 text-green-700'
+                                : purchase.status === 'failed'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {purchase.status || 'desconocido'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        ) : null}
       </main>
 
       {/* Modals */}
@@ -459,6 +944,22 @@ export default function AdminDashboard() {
             setConfiguringSeason(null)
           }}
           onToggleTour={(tourId) => toggleSeasonForTour(tourId, configuringSeason)}
+        />
+      )}
+
+      {/* Testimonial Form Modal */}
+      {(showTestimonialForm || editingTestimonial) && (
+        <TestimonialFormModal
+          testimonial={editingTestimonial}
+          onClose={() => {
+            setShowTestimonialForm(false)
+            setEditingTestimonial(null)
+          }}
+          onSave={() => {
+            loadTestimonials()
+            setShowTestimonialForm(false)
+            setEditingTestimonial(null)
+          }}
         />
       )}
     </div>
@@ -2562,6 +3063,236 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Testimonial Form Modal ───────────────────────────────────────────────────
+
+interface TestimonialFormModalProps {
+  testimonial?: Testimonial | null
+  onClose: () => void
+  onSave: () => void
+}
+
+function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormModalProps) {
+  const [formData, setFormData] = useState({
+    name: testimonial?.name || '',
+    location: testimonial?.location || '',
+    text: testimonial?.text || '',
+    stars: testimonial?.stars || 5,
+    avatar: testimonial?.avatar || ''
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name.trim() || !formData.location.trim() || !formData.text.trim()) {
+      alert('Por favor completa todos los campos requeridos')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const method = testimonial ? 'PUT' : 'POST'
+      const url = testimonial 
+        ? `http://localhost:3001/api/testimonials/${testimonial._id}`
+        : 'http://localhost:3001/api/testimonials'
+
+      const body = {
+        ...formData,
+        avatar: formData.avatar || `https://i.pravatar.cc/80?img=${Math.floor(Math.random() * 70)}`
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+
+      const data = await res.json()
+
+      if (data.ok) {
+        onSave()
+      } else {
+        throw new Error(data.error || 'Error al guardar testimonio')
+      }
+    } catch (err) {
+      console.error('Error saving testimonial:', err)
+      alert('Error al guardar el testimonio')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-teal-600 text-white p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">
+                {testimonial ? 'Editar Testimonio' : 'Agregar Testimonio'}
+              </h2>
+              <p className="text-blue-100 text-sm mt-1">
+                {testimonial ? 'Modifica la información del testimonio' : 'Agrega un nuevo testimonio de cliente'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Nombre completo *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: María Fernández"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Ubicación *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Lima, Arequipa, Cusco"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Testimonio *
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={formData.text}
+              onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Escribe aquí la experiencia del cliente..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Calificación (estrellas) *
+              </label>
+              <select
+                required
+                value={formData.stars}
+                onChange={(e) => setFormData({ ...formData, stars: Number(e.target.value) })}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={5}>⭐⭐⭐⭐⭐ (5 estrellas)</option>
+                <option value={4}>⭐⭐⭐⭐ (4 estrellas)</option>
+                <option value={3}>⭐⭐⭐ (3 estrellas)</option>
+                <option value={2}>⭐⭐ (2 estrellas)</option>
+                <option value={1}>⭐ (1 estrella)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                URL Avatar (opcional)
+              </label>
+              <input
+                type="url"
+                value={formData.avatar}
+                onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://ejemplo.com/avatar.jpg"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Si lo dejas vacío, se generará uno automáticamente
+              </p>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Vista previa:</p>
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex gap-0.5 mb-3">
+                {Array.from({ length: formData.stars }).map((_, i) => (
+                  <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-gray-600 text-sm italic mb-3">
+                "{formData.text || 'El testimonio aparecerá aquí...'}"
+              </p>
+              <div className="flex items-center gap-3">
+                <img 
+                  src={formData.avatar || `https://i.pravatar.cc/80?img=47`} 
+                  alt="Avatar" 
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-brand-teal-l" 
+                />
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">
+                    {formData.name || 'Nombre del cliente'}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    📍 {formData.location || 'Ubicación'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  {testimonial ? 'Guardar cambios' : 'Agregar testimonio'}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

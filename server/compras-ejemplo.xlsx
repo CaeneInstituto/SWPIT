@@ -1,0 +1,3 @@
+ID Compra	Fecha y Hora	Nombre Cliente	Email	Teléfono	Método de Pago	Tours	Cantidad Personas	Fecha de Viaje	Precio Total (S/)	Monto Reserva (S/)	Estado Pago	Nota/Voucher	ID Culqi
+PIT-1723456789012	14/08/2026 15:30:45	Juan Pérez García	juan@example.com	929648380	Yape	Huancaya Full Day (Adulto)	2	2026-09-15	340.00	170.00	Pendiente confirmación	N° operación 123456	
+PIT-1723456789013	14/08/2026 16:45:20	María López	maria@example.com	987654321	Tarjeta de crédito/débito	Paracas 2D1N (Adulto); Paracas 2D1N (Niño)	3	2026-09-20	1200.00	1200.00	Pagado		chr_live_abc123xyz456

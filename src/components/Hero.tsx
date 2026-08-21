@@ -2,24 +2,34 @@ import { useState, useEffect, useCallback } from 'react'
 
 const slides = [
   {
-    image: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&q=80',
+    image: '/Autisha/DSC_0402330.jpg',
     slogan: 'Recuerdos que trascienden',
     sub: 'Desde las alturas de los Andes hasta la selva amazónica, cada rincón te espera.',
+    lugar: '📍 Cañón de Autisha',
   },
   {
-    image: 'https://images.unsplash.com/photo-1580619305218-8423a7ef79b4?w=1600&q=80',
-    slogan: 'Cascadas, lagunas y aventura',
-    sub: 'Huancaya, Llaguapucro y más destinos únicos te están esperando.',
+    image: '/NevadoRajuntay/DSC_0297_copia2.jpg',
+    slogan: 'Aventura en las alturas',
+    sub: 'Nevados, lagunas y paisajes únicos que solo Perú puede ofrecerte.',
+    lugar: '📍 Nevado Rajuntay',
   },
   {
-    image: 'https://images.unsplash.com/photo-1531065208531-4036c0dba3ca?w=1600&q=80',
-    slogan: 'Viaja con los mejores',
-    sub: 'Agencia registrada en Mincetur. Más de 5,000 viajeros felices nos respaldan.',
+    image: '/LomasLachay/PXL_20250713_143837289.jpg',
+    slogan: 'Naturaleza en su estado puro',
+    sub: 'Lomas, desiertos y oasis que te dejarán sin palabras.',
+    lugar: '📍 Lomas de Lachay',
   },
   {
-    image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80',
-    slogan: 'Experiencias que duran para siempre',
-    sub: 'Guías expertos, transporte seguro y recuerdos que no tienen precio.',
+    image: '/ICA/DSC_01915178.JPG',
+    slogan: 'El desierto también tiene magia',
+    sub: 'Paracas, Huacachina y las Líneas de Nazca te esperan.',
+    lugar: '📍 Ica - Paracas',
+  },
+  {
+    image: '/AyacuchoSemanaSanta/PXL_20240329_203238880.jpg',
+    slogan: 'Cultura viva del Perú profundo',
+    sub: 'Semana Santa en Ayacucho, la celebración más impresionante del país.',
+    lugar: '📍 Ayacucho',
   },
 ]
 
@@ -66,7 +76,7 @@ export default function Hero() {
       {/* Content */}
       <div className={`relative z-10 text-center px-4 max-w-4xl mx-auto transition-all duration-500 ${animating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
         <span className="inline-block bg-brand-yellow text-white text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-6 shadow">
-          Agencia de viajes oficial
+          {slide.lugar}
         </span>
 
         <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6 drop-shadow-lg">
