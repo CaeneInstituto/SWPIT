@@ -108,6 +108,9 @@ export default function Cart() {
                     <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">{item.tourName}</h3>
                     <p className="text-xs text-gray-600 mb-1">{item.priceOption}</p>
                     <p className="text-xs text-gray-500">📅 {item.travelDate}</p>
+                    <p className="text-xs text-purple-600 mt-1">
+                      👥 {item.personsPerPackage} {item.personsPerPackage === 1 ? 'persona' : 'personas'} por paquete
+                    </p>
                     <p className="text-brand-teal font-bold mt-2">S/ {item.priceValue.toFixed(2)} × {item.quantity}</p>
                   </div>
                   <button
@@ -123,7 +126,7 @@ export default function Cart() {
 
                 {/* Quantity controls */}
                 <div className="flex items-center gap-3 mt-3">
-                  <span className="text-xs text-gray-600">Personas:</span>
+                  <span className="text-xs text-gray-600">Paquetes:</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => updateQuantity(item.tourId, item.priceOption, item.quantity - 1)}
@@ -139,6 +142,9 @@ export default function Cart() {
                       +
                     </button>
                   </div>
+                  <span className="text-xs text-gray-500 ml-auto">
+                    = {item.personsPerPackage * item.quantity} {item.personsPerPackage * item.quantity === 1 ? 'persona' : 'personas'}
+                  </span>
                 </div>
               </div>
             ))

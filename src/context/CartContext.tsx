@@ -6,8 +6,51 @@ export interface CartItem {
   tourImage: string
   priceOption: string
   priceValue: number
-  quantity: number
+  quantity: number // Cantidad de paquetes
   travelDate: string
+  personsPerPackage: number // Cuántas personas incluye cada paquete
+  boardingPoints?: Array<{ name: string; address: string; time: string }> // Puntos de embarque del tour
+  hasAccommodation: boolean // Si el paquete incluye alojamiento
+}
+
+// Helper function para detectar cuántas personas incluye un paquete
+export function detectPersonsPerPackage(optionLabel: string): number {
+  const label = optionLabel.toLowerCase()
+  
+  // Detectar patrones específicos
+  if (label.includes('cuádruple') || label.includes('cuadruple')) return 4
+  if (label.includes('triple')) return 3
+  if (label.includes('doble') || label.includes('matrimonial') || label.includes('parejas') || label.includes('2 personas')) return 2
+  if (label.includes('individual') || label.includes('1 persona')) return 1
+  
+  // Detectar "a partir de X personas"
+  const matchApartir = label.match(/a partir de (\d+)/i)
+  if (matchApartir) return parseInt(matchApartir[1])
+  
+  // Detectar "X personas"
+  const matchPersonas = label.match(/(\d+)\s*personas?/i)
+  if (matchPersonas) return parseInt(matchPersonas[1])
+  
+  // Por defecto, asumimos 1 persona por paquete
+  return 1
+}
+
+// Helper function para detectar si tiene alojamiento
+export function detectHasAccommodation(optionLabel: string, tourDays: string): boolean {
+  const label = optionLabel.toLowerCase()
+  const days = tourDays.toLowerCase()
+  
+  // Si menciona habitación, hotel, hospedaje, o noches
+  if (label.includes('habitación') || label.includes('hotel') || label.includes('hospedaje') || label.includes('noche')) {
+    return true
+  }
+  
+  // Si el tour es de varios días (no full day)
+  if (!days.includes('full day') && !days.includes('1 día')) {
+    return true
+  }
+  
+  return false
 }
 
 interface CartContextType {

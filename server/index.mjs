@@ -154,6 +154,7 @@ app.post('/api/save-purchase', async (req, res) => {
     name,
     email,
     phone,
+    dni,
     method,
     tours,
     totalPersons,
@@ -162,26 +163,35 @@ app.post('/api/save-purchase', async (req, res) => {
     reserveAmount,
     paymentStatus,
     note,
-    culqiId
+    culqiId,
+    embarque,
+    habitacion,
+    comentario,
+    passengers
   } = req.body
 
   try {
     const compra = {
-      chargeId: culqiId || `manual_${method.toLowerCase()}_${Date.now()}`,
+      chargeId: culqiId || `manual_${method.toLowerCase().replace(/\s/g,'_')}_${Date.now()}`,
       amount: parseFloat(reserveAmount) || parseFloat(totalPrice) || 0,
       currency: 'PEN',
       status: paymentStatus === 'Pagado' ? 'venta' : 'pendiente',
-      email: email || 'sin-email@peruintravel.pe',
+      email: email || '',
       buyerName: name || 'Sin especificar',
       description: tours || 'Reserva Peru In Travel',
       items: tours ? tours.split(';').map(t => ({ name: t.trim(), quantity: 1 })) : [],
       metadata: {
         telefono: phone || '',
+        dni: dni || '',
         origen: method || 'Web',
         fechaViaje: travelDate || '',
         totalPersonas: totalPersons || 0,
         notaVoucher: note || '',
-        tipoCompra: 'Manual'
+        tipoCompra: 'Manual',
+        puntoEmbarque: embarque || '',
+        habitacion: habitacion || '',
+        comentario: comentario || '',
+        pasajeros: passengers || []
       },
       createdAt: new Date(),
       card: method.toLowerCase().includes('tarjeta') ? {
@@ -193,7 +203,7 @@ app.post('/api/save-purchase', async (req, res) => {
     }
 
     const result = await db.collection('compras').insertOne(compra)
-    console.log(`💾 Compra manual guardada — ${compra.chargeId} | ${email} | ${method}`)
+    console.log(`💾 Compra manual guardada — ${compra.chargeId} | ${email || phone} | ${method}`)
     
     res.json({ ok: true, id: result.insertedId, message: 'Compra guardada exitosamente' })
   } catch (err) {

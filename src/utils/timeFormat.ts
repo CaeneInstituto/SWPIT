@@ -55,16 +55,49 @@ export function normalizeToTime24(time: string): string {
  * - "13:30" → "01:30 pm"
  * - "00:00" → "12:00 am"
  * - "12:00" → "12:00 pm"
+ * 
+ * MANEJA TAMBIÉN FORMATOS INCORRECTOS:
+ * - "13:00 pm" → "01:00 pm" (corrige 24h mezclado con am/pm)
+ * - "07:15 am" → "07:15 am" (ya correcto, lo deja igual)
+ * - "00:30 am" → "12:30 am" (corrige medianoche)
+ * - Formatos descriptivos como "Mañana", "Tarde" → se devuelven tal como están
  */
 export function formatToTime12(time24: string): string {
   if (!time24 || time24.trim() === '') return '08:00 am'
   
-  // Si ya tiene am/pm, devolverlo tal cual
-  if (time24.toLowerCase().includes('am') || time24.toLowerCase().includes('pm')) {
-    return time24
+  const cleaned = time24.trim()
+  
+  // Si es un formato descriptivo (Mañana, Tarde, Noche, etc.), devolverlo tal como está
+  if (!/\d/.test(cleaned)) {
+    return cleaned
   }
   
-  const match = time24.match(/(\d{1,2}):(\d{2})/)
+  const lowerCleaned = cleaned.toLowerCase()
+  
+  // Si ya tiene am/pm, extraer la hora y verificar si es formato mixto incorrecto
+  if (lowerCleaned.includes('am') || lowerCleaned.includes('pm')) {
+    const match = lowerCleaned.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+    if (!match) return '08:00 am'
+    
+    const [, hoursStr, minutes, period] = match
+    let hours = parseInt(hoursStr, 10)
+    
+    // Corregir casos especiales
+    if (hours === 0 && period === 'am') {
+      // 00:xx am → 12:xx am (medianoche)
+      hours = 12
+    } else if (hours > 12) {
+      // Si la hora es > 12, significa que está en formato 24h mezclado incorrectamente
+      hours = hours - 12
+      return `${hours.toString().padStart(2, '0')}:${minutes} pm`
+    }
+    
+    // Ya está en formato correcto, devolverlo limpio
+    return `${hours.toString().padStart(2, '0')}:${minutes} ${period}`
+  }
+  
+  // Formato 24h puro, convertir a 12h
+  const match = lowerCleaned.match(/(\d{1,2}):(\d{2})/)
   if (!match) {
     console.warn('Invalid 24h time format:', time24)
     return '08:00 am'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useCart } from '../context/CartContext'
+import { useCart, detectPersonsPerPackage, detectHasAccommodation } from '../context/CartContext'
 import type { Tour } from '../data/tours'
 
 interface AddToCartButtonProps {
@@ -26,6 +26,8 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
     }
 
     const priceNumeric = parseFloat(selectedOption.price.replace(/[^\d.]/g, ''))
+    const personsPerPackage = detectPersonsPerPackage(selectedOption.label)
+    const hasAccommodation = detectHasAccommodation(selectedOption.label, tour.days)
 
     addItem({
       tourId: tour.id,
@@ -35,6 +37,9 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
       priceValue: priceNumeric,
       quantity,
       travelDate,
+      personsPerPackage,
+      boardingPoints: tour.boardingPoints,
+      hasAccommodation,
     })
 
     setShowModal(false)
@@ -129,6 +134,10 @@ function CartModal({
   onClose,
   onAdd,
 }: CartModalProps) {
+  // Detectar cuántas personas incluye el paquete seleccionado
+  const personsPerPackage = detectPersonsPerPackage(selectedOption.label)
+  const totalPersons = personsPerPackage * quantity
+  
   return (
     <>
       {/* Overlay */}
@@ -186,7 +195,14 @@ function CartModal({
 
           {/* Quantity */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">número de personas</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              cantidad de paquetes
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              {personsPerPackage > 1 
+                ? `Cada paquete incluye ${personsPerPackage} personas` 
+                : 'Cada paquete es para 1 persona'}
+            </p>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -222,11 +238,16 @@ function CartModal({
 
           {/* Total */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Subtotal ({quantity} {quantity === 1 ? 'persona' : 'personas'})</span>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-600">
+                Subtotal ({quantity} {quantity === 1 ? 'paquete' : 'paquetes'})
+              </span>
               <span className="text-2xl font-bold text-brand-teal">
                 S/ {(parseFloat(selectedOption.price.replace(/[^\d.]/g, '')) * quantity).toFixed(2)}
               </span>
+            </div>
+            <div className="text-xs text-gray-500 border-t pt-2">
+              Total de personas: <span className="font-semibold text-gray-700">{totalPersons}</span>
             </div>
           </div>
 

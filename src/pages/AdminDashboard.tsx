@@ -267,20 +267,32 @@ export default function AdminDashboard() {
       const XLSX = await import('xlsx')
       
       // Preparar datos para Excel
-      const excelData = purchases.map((purchase, index) => ({
-        'N°': index + 1,
-        'ID de Cargo': purchase.chargeId || '',
-        'Fecha': purchase.createdAt ? new Date(purchase.createdAt).toLocaleString('es-PE') : '',
-        'Cliente': purchase.buyerName || 'No especificado',
-        'Email': purchase.email || '',
-        'Monto (PEN)': purchase.amount || 0,
-        'Estado': purchase.status || 'desconocido',
-        'Descripción': purchase.description || '',
-        'Tarjeta': purchase.card ? `${purchase.card.brand} ****${purchase.card.last4}` : 'N/A',
-        'País': purchase.card?.country || 'N/A',
-        'Items': purchase.items ? purchase.items.map((item: any) => item.name || item.description).join(', ') : '',
-        'Metadata': purchase.metadata ? JSON.stringify(purchase.metadata) : ''
-      }))
+      const excelData = purchases.map((purchase, index) => {
+        const pasajeros = purchase.metadata?.pasajeros || []
+        const pasajerosTexto = pasajeros.map((p: any) => 
+          `${p.nombre || '-'} (DNI: ${p.dni || '-'}, Edad: ${p.edad || '-'})`
+        ).join('; ')
+        
+        return {
+          'N°': index + 1,
+          'Fecha': purchase.createdAt ? new Date(purchase.createdAt).toLocaleString('es-PE') : '',
+          'Cliente': purchase.buyerName || 'No especificado',
+          'DNI Cliente': purchase.metadata?.dni || 'N/A',
+          'Teléfono': purchase.metadata?.telefono || 'N/A',
+          'Email': purchase.email || 'N/A',
+          'Monto (PEN)': purchase.amount || 0,
+          'Estado': purchase.status || 'desconocido',
+          'Método de Pago': purchase.paymentMethod || 'Tarjeta',
+          'Tour/Paquete': purchase.description || '',
+          'Fecha de Viaje': purchase.metadata?.fechaViaje || 'N/A',
+          'Cantidad Personas': purchase.metadata?.totalPersonas || 0,
+          'Pasajeros (Nombre/DNI/Edad)': pasajerosTexto || 'N/A',
+          'Punto de Embarque': purchase.metadata?.puntoEmbarque || 'N/A',
+          'Habitación': purchase.metadata?.habitacion || 'N/A',
+          'Comentario': purchase.metadata?.comentario || '',
+          'Cantidad Items': purchase.items ? purchase.items.length : 0
+        }
+      })
 
       // Crear workbook y worksheet
       const wb = XLSX.utils.book_new()
@@ -289,17 +301,22 @@ export default function AdminDashboard() {
       // Configurar ancho de columnas
       const colWidths = [
         { wch: 5 },  // N°
-        { wch: 25 }, // ID de Cargo
         { wch: 20 }, // Fecha
         { wch: 25 }, // Cliente
+        { wch: 12 }, // DNI Cliente
+        { wch: 15 }, // Teléfono
         { wch: 30 }, // Email
         { wch: 12 }, // Monto
         { wch: 12 }, // Estado
-        { wch: 40 }, // Descripción
-        { wch: 20 }, // Tarjeta
-        { wch: 10 }, // País
-        { wch: 50 }, // Items
-        { wch: 30 }  // Metadata
+        { wch: 20 }, // Método Pago
+        { wch: 40 }, // Tour/Paquete
+        { wch: 15 }, // Fecha Viaje
+        { wch: 10 }, // Cantidad Personas
+        { wch: 60 }, // Pasajeros (Nombre/DNI/Edad)
+        { wch: 30 }, // Punto Embarque
+        { wch: 25 }, // Habitación
+        { wch: 40 }, // Comentario
+        { wch: 10 }  // Cantidad Items
       ]
       ws['!cols'] = colWidths
 
@@ -833,72 +850,158 @@ export default function AdminDashboard() {
                 <>
                   {/* Table Header */}
                   <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-sm font-semibold text-gray-700">
-                      <div className="lg:col-span-2">Fecha</div>
-                      <div className="lg:col-span-2">Cliente</div>
-                      <div className="lg:col-span-2">Email</div>
-                      <div className="lg:col-span-1">Monto</div>
-                      <div className="lg:col-span-2">Paquete</div>
-                      <div className="lg:col-span-2">Tarjeta</div>
-                      <div className="lg:col-span-1">Estado</div>
+                    <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      <div className="col-span-2">Cliente / Contacto</div>
+                      <div className="col-span-2">Paquete / Tour</div>
+                      <div className="col-span-1">Fecha Viaje</div>
+                      <div className="col-span-1">Personas</div>
+                      <div className="col-span-2">Embarque</div>
+                      <div className="col-span-1 text-center">Monto</div>
+                      <div className="col-span-2">Método / Estado</div>
+                      <div className="col-span-1">Detalles</div>
                     </div>
                   </div>
                   
                   {/* Table Body */}
                   <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                     {purchases.map((purchase, index) => (
-                      <div key={purchase._id || index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-sm">
-                          <div className="lg:col-span-2">
-                            <div className="font-medium text-gray-900">
-                              {purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString('es-PE') : 'N/A'}
-                            </div>
-                            <div className="text-gray-500 text-xs">
-                              {purchase.createdAt ? new Date(purchase.createdAt).toLocaleTimeString('es-PE') : ''}
-                            </div>
-                          </div>
-                          <div className="lg:col-span-2">
-                            <div className="font-medium text-gray-900">
+                      <div key={purchase._id || index} className="px-6 py-4 hover:bg-gray-50 transition-colors border-b border-gray-100">
+                        <div className="grid grid-cols-12 gap-3 text-sm">
+                          
+                          {/* Cliente / Contacto */}
+                          <div className="col-span-2">
+                            <div className="font-semibold text-gray-900 text-sm mb-1">
                               {purchase.buyerName || 'No especificado'}
                             </div>
-                          </div>
-                          <div className="lg:col-span-2">
-                            <div className="text-gray-600 text-xs">
-                              {purchase.email || 'N/A'}
+                            <div className="text-xs text-gray-500 space-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">DNI:</span> {purchase.metadata?.dni || 'N/A'}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Tel:</span> {purchase.metadata?.telefono || 'N/A'}
+                              </div>
+                              {purchase.email && (
+                                <div className="flex items-center gap-1 truncate" title={purchase.email}>
+                                  <span className="font-medium">✉</span> {purchase.email}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : ''} {purchase.createdAt ? new Date(purchase.createdAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : ''}
                             </div>
                           </div>
-                          <div className="lg:col-span-1">
-                            <span className="font-bold text-green-600">
-                              S/ {purchase.amount || 0}
-                            </span>
-                          </div>
-                          <div className="lg:col-span-2">
-                            <div className="text-gray-600 text-xs truncate" title={purchase.description}>
+
+                          {/* Paquete */}
+                          <div className="col-span-2">
+                            <div className="text-sm text-gray-900 font-medium line-clamp-2" title={purchase.description}>
                               {purchase.description || 'Sin descripción'}
                             </div>
-                          </div>
-                          <div className="lg:col-span-2">
-                            {purchase.card ? (
-                              <div className="text-gray-600 text-xs">
-                                <div>{purchase.card.brand} ****{purchase.card.last4}</div>
-                                <div className="text-gray-400">{purchase.card.country || 'N/A'}</div>
+                            {purchase.metadata?.habitacion && (
+                              <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                                🛏️ {purchase.metadata.habitacion}
                               </div>
-                            ) : (
-                              <span className="text-gray-400 text-xs">N/A</span>
                             )}
                           </div>
-                          <div className="lg:col-span-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+
+                          {/* Fecha Viaje */}
+                          <div className="col-span-1">
+                            <div className="text-xs text-gray-700 font-medium">
+                              {purchase.metadata?.fechaViaje || 'N/A'}
+                            </div>
+                          </div>
+
+                          {/* Personas */}
+                          <div className="col-span-1">
+                            <div className="flex justify-center">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-sm font-bold">
+                                {purchase.metadata?.totalPersonas || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Embarque */}
+                          <div className="col-span-2">
+                            <div className="text-xs text-gray-600 line-clamp-2" title={purchase.metadata?.puntoEmbarque}>
+                              📍 {purchase.metadata?.puntoEmbarque || 'N/A'}
+                            </div>
+                          </div>
+
+                          {/* Monto */}
+                          <div className="col-span-1 text-center">
+                            <div className="text-lg font-bold text-green-600">
+                              S/ {purchase.amount || 0}
+                            </div>
+                          </div>
+
+                          {/* Método / Estado */}
+                          <div className="col-span-2 space-y-1">
+                            <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                              {purchase.paymentMethod || 'Tarjeta'}
+                            </span>
+                            <br />
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
                               purchase.status === 'venta' || purchase.status === 'successful' 
                                 ? 'bg-green-100 text-green-700'
                                 : purchase.status === 'failed'
                                 ? 'bg-red-100 text-red-700'
-                                : 'bg-gray-100 text-gray-700'
+                                : 'bg-yellow-100 text-yellow-700'
                             }`}>
-                              {purchase.status || 'desconocido'}
+                              {purchase.status === 'venta' ? 'Pagado' : purchase.status === 'successful' ? 'Exitoso' : purchase.status === 'failed' ? 'Fallido' : 'Pendiente'}
                             </span>
                           </div>
+
+                          {/* Detalles - Botón expandir */}
+                          <div className="col-span-1 flex items-center justify-center">
+                            {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario ? (
+                              <button 
+                                onClick={() => {
+                                  const row = document.getElementById(`details-${purchase._id}`)
+                                  if (row) {
+                                    row.style.display = row.style.display === 'none' ? 'block' : 'none'
+                                  }
+                                }}
+                                className="text-brand-teal hover:text-brand-teal-d text-xs font-semibold px-3 py-1 border border-brand-teal rounded-lg hover:bg-teal-50 transition-colors"
+                              >
+                                Ver más
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </div>
                         </div>
+                        
+                        {/* Fila expandible con más detalles */}
+                        {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario ? (
+                          <div id={`details-${purchase._id}`} style={{ display: 'none' }} className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-gray-50 rounded-lg p-4">
+                              {purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0 && (
+                                <div>
+                                  <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                    👥 Pasajeros ({purchase.metadata.pasajeros.length})
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    {purchase.metadata.pasajeros.map((p: any, i: number) => (
+                                      <div key={i} className="text-gray-600 bg-white rounded px-2 py-1">
+                                        <span className="font-medium">{i + 1}.</span> {p.nombre || 'Sin nombre'} 
+                                        <span className="text-gray-500"> • DNI: {p.dni || 'N/A'} • Edad: {p.edad || 'N/A'}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {purchase.metadata?.comentario && (
+                                <div>
+                                  <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                    💬 Comentario
+                                  </div>
+                                  <div className="text-gray-600 italic bg-white rounded px-3 py-2">
+                                    "{purchase.metadata.comentario}"
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>

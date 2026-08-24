@@ -18,7 +18,7 @@ const PAYMENT_INFO = {
 }
 
 type PaymentMethod = 'yape' | 'plin' | 'transfer' | 'card'
-type ModalStep     = 'method' | 'instructions' | 'confirm'
+type ModalStep     = 'method' | 'instructions' | 'confirm' | 'passengers'
 
 interface Props { onClose: () => void }
 
@@ -30,32 +30,66 @@ export default function PaymentModal({ onClose }: Props) {
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
   const [phone, setPhone]       = useState('')
+  const [dni, setDni]           = useState('')
+  const [embarque, setEmbarque] = useState('')
+  const [habitacion, setHabitacion] = useState('')
+  const [comentario, setComentario] = useState('')
+  
+  // Calcular total de personas del carrito (sumando personsPerPackage * quantity de cada item)
+  const totalPersonsFromCart = items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+  
+  // Verificar si hay algún paquete con alojamiento
+  const hasAnyAccommodation = items.some(item => item.hasAccommodation)
+  
+  // Obtener puntos de embarque (del primer item que los tenga)
+  const boardingPoints = items.find(item => item.boardingPoints)?.boardingPoints || []
+  
+  // Inicializar pasajeros según la cantidad del carrito
+  const initializePassengers = () => {
+    const passengerCount = Math.max(1, totalPersonsFromCart)
+    return Array.from({ length: passengerCount }, () => ({ nombre: '', dni: '', edad: '' }))
+  }
+  
+  const [passengers, setPassengers] = useState<Array<{
+    nombre: string
+    dni: string
+    edad: string
+  }>>(initializePassengers())
 
   const methodLabels: Record<PaymentMethod, string> = {
-    yape:     'Yape',
+    yape:     'Yape (50% adelanto por WhatsApp)',
     plin:     'Plin',
     transfer: 'Transferencia bancaria',
     card:     'Tarjeta de crédito/débito',
   }
 
   const handleConfirm = async () => {
+    // Calcular monto según método (Yape 50%, demás 100%)
+    const isYape = method === 'yape'
+    const amountToPay = isYape ? totalPrice * 0.5 : totalPrice
+    
     // Preparar datos para guardar
     const purchaseData = {
       name: name || 'Sin especificar',
-      email: email || '',
+      email: method === 'card' ? email : '', // Solo guardar email si es tarjeta
       phone: phone || '',
+      dni: dni || '',
       method: methodLabels[method],
       tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
-      totalPersons: items.reduce((sum, item) => sum + item.quantity, 0),
+      totalPersons: totalPersonsFromCart,
       travelDate: items.map(item => item.travelDate).join('; '),
       totalPrice: totalPrice.toFixed(2),
-      reserveAmount: totalPrice.toFixed(2), // 100% del precio
+      reserveAmount: amountToPay.toFixed(2),
       paymentStatus: 'Pendiente confirmación',
       note: voucherNote || '',
-      culqiId: ''
+      culqiId: '',
+      embarque: embarque || '',
+      habitacion: habitacion || '',
+      comentario: comentario || '',
+      passengers: passengers.filter(p => p.nombre || p.dni || p.edad) // Solo pasajeros con datos
     }
 
-    // Guardar en Excel
+    // Guardar en BD
     try {
       await fetch(`${API_URL}/api/save-purchase`, {
         method: 'POST',
@@ -69,6 +103,8 @@ export default function PaymentModal({ onClose }: Props) {
     // Construir mensaje de WhatsApp
     let message = `🌄 *Reserva Peru In Travel*\n\n`
     message += `👤 *Nombre:* ${name || '(sin especificar)'}\n`
+    if (dni) message += `🆔 *DNI:* ${dni}\n`
+    message += `📱 *Teléfono:* ${phone || '(sin especificar)'}\n`
     message += `💳 *Método de pago:* ${methodLabels[method]}\n\n`
     message += `📦 *Paquetes:*\n`
     items.forEach((item, i) => {
@@ -78,8 +114,11 @@ export default function PaymentModal({ onClose }: Props) {
       message += `   Fecha: ${item.travelDate}\n`
       message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
-    message += `💰 *Total a pagar: S/ ${totalPrice.toFixed(2)}*\n`
+    message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n`
+    message += `💵 *Monto a pagar: S/ ${amountToPay.toFixed(2)}*${isYape ? ' (50% adelanto)' : ''}\n`
+    if (embarque) message += `📍 *Punto de embarque:* ${embarque}\n`
     if (voucherNote) message += `📎 *Nota:* ${voucherNote}\n`
+    if (comentario) message += `💬 *Comentario:* ${comentario}\n`
     message += `\nPor favor confirmen la reserva. ¡Gracias! 🙏`
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
     clearCart()
@@ -123,7 +162,7 @@ export default function PaymentModal({ onClose }: Props) {
           {/* STEP 1 – Elegir método */}
           {step === 'method' && (
             <div className="space-y-3">
-              <p className="text-gray-600 text-sm mb-4">Selecciona cómo realizarás el pago completo:</p>
+              <p className="text-gray-600 text-sm mb-4">Selecciona cómo realizarás el pago:</p>
               {(['yape', 'plin', 'card', 'transfer'] as PaymentMethod[]).map((m) => (
                 <button key={m} onClick={() => setMethod(m)}
                   className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
@@ -138,10 +177,10 @@ export default function PaymentModal({ onClose }: Props) {
                   <div className="text-left flex-1">
                     <p className="font-semibold text-gray-800">{methodLabels[m]}</p>
                     <p className="text-xs text-gray-500">
-                      {m === 'yape' ? 'Pago rápido desde tu app Yape'
-                      : m === 'plin' ? 'Pago rápido desde tu app Plin'
-                      : m === 'card' ? 'Visa, Mastercard, Amex · Powered by Culqi'
-                      : 'Depósito o transferencia bancaria'}
+                      {m === 'yape' ? 'Pago rápido desde tu app Yape · Coordinación por WhatsApp (50% adelanto)'
+                      : m === 'plin' ? 'Pago rápido desde tu app Plin (100%)'
+                      : m === 'card' ? 'Visa, Mastercard, Amex · Powered by Culqi (100%)'
+                      : 'Depósito o transferencia bancaria (100%)'}
                     </p>
                   </div>
                   {method === m && (
@@ -174,15 +213,29 @@ export default function PaymentModal({ onClose }: Props) {
                     </p>
                     <p className="text-gray-500 text-sm">Peru In Travel</p>
                   </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
-                    <p className="font-semibold text-yellow-800">📋 Instrucciones:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-yellow-700 mt-2">
-                      <li>Abre tu app {method === 'yape' ? 'Yape' : 'Plin'}</li>
-                      <li>Ingresa el número <strong>{method === 'yape' ? PAYMENT_INFO.yape.number : PAYMENT_INFO.plin.number}</strong></li>
-                      <li>Envía <strong>S/ {totalPrice.toFixed(2)}</strong></li>
-                      <li>Guarda el comprobante y continúa</li>
-                    </ol>
-                  </div>
+                  {method === 'yape' ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
+                      <p className="font-semibold text-blue-800">📋 Instrucciones (Pago 50% adelanto):</p>
+                      <ol className="list-decimal list-inside space-y-1 text-blue-700 mt-2">
+                        <li>Abre tu app Yape</li>
+                        <li>Ingresa el número <strong>{PAYMENT_INFO.yape.number}</strong></li>
+                        <li>Envía <strong>S/ {(totalPrice * 0.5).toFixed(2)}</strong> (50% del total)</li>
+                        <li>Guarda el comprobante</li>
+                        <li>Completa el formulario y envía por WhatsApp</li>
+                        <li>El 50% restante se paga antes del viaje</li>
+                      </ol>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
+                      <p className="font-semibold text-yellow-800">📋 Instrucciones:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-yellow-700 mt-2">
+                        <li>Abre tu app Plin</li>
+                        <li>Ingresa el número <strong>{PAYMENT_INFO.plin.number}</strong></li>
+                        <li>Envía <strong>S/ {totalPrice.toFixed(2)}</strong> (pago completo)</li>
+                        <li>Guarda el comprobante y continúa</li>
+                      </ol>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -191,6 +244,7 @@ export default function PaymentModal({ onClose }: Props) {
                 <CardPaymentForm
                   totalPrice={totalPrice}
                   tourNames={tourNames}
+                  items={items}
                 />
               )}
 
@@ -237,19 +291,136 @@ export default function PaymentModal({ onClose }: Props) {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Tu nombre completo</label>
-                  <input type="text" placeholder="Ej: Juan Pérez" value={name} onChange={e => setName(e.target.value)}
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Tu nombre completo *</label>
+                  <input type="text" placeholder="Ej: Juan Pérez" value={name} onChange={e => setName(e.target.value)} required
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Correo electrónico</label>
-                  <input type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)}
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">DNI *</label>
+                  <input type="text" placeholder="Ej: 12345678" value={dni} onChange={e => setDni(e.target.value)} required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                </div>
+                {method === 'card' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Correo electrónico *</label>
+                    <input type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Teléfono / WhatsApp *</label>
+                  <input type="tel" placeholder="Ej: 929648380" value={phone} onChange={e => setPhone(e.target.value)} required
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Teléfono / WhatsApp</label>
-                  <input type="tel" placeholder="Ej: 929648380" value={phone} onChange={e => setPhone(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
+                    Punto de embarque {boardingPoints.length > 0 && '*'}
+                  </label>
+                  {boardingPoints.length > 0 ? (
+                    <select
+                      value={embarque}
+                      onChange={e => setEmbarque(e.target.value)}
+                      required
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                    >
+                      <option value="">Selecciona un punto de embarque</option>
+                      {boardingPoints.map((point, index) => (
+                        <option key={index} value={point.name}>
+                          {point.name} - {point.time}
+                        </option>
+                      ))}
+                      <option value="Otro">Otro (especificar en comentario)</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Ej: Plaza San Martín, Lima"
+                      value={embarque}
+                      onChange={e => setEmbarque(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                    />
+                  )}
+                </div>
+                {hasAnyAccommodation && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Habitación (si aplica)</label>
+                    <input type="text" placeholder="Ej: Simple, Doble, Matrimonial" value={habitacion} onChange={e => setHabitacion(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                  </div>
+                )}
+                
+                {/* Pasajeros adicionales */}
+                <div className="border-t pt-3">
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Datos de pasajeros</label>
+                  {passengers.map((passenger, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-600">Pasajero {index + 1}</span>
+                        {passengers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setPassengers(passengers.filter((_, i) => i !== index))}
+                            className="text-red-500 text-xs hover:text-red-700"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nombre"
+                          value={passenger.nombre}
+                          onChange={e => {
+                            const newPassengers = [...passengers]
+                            newPassengers[index].nombre = e.target.value
+                            setPassengers(newPassengers)
+                          }}
+                          className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="DNI"
+                          value={passenger.dni}
+                          onChange={e => {
+                            const newPassengers = [...passengers]
+                            newPassengers[index].dni = e.target.value
+                            setPassengers(newPassengers)
+                          }}
+                          className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Edad"
+                          value={passenger.edad}
+                          onChange={e => {
+                            const newPassengers = [...passengers]
+                            newPassengers[index].edad = e.target.value
+                            setPassengers(newPassengers)
+                          }}
+                          className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPassengers([...passengers, { nombre: '', dni: '', edad: '' }])}
+                    className="text-xs text-brand-teal hover:underline font-semibold"
+                  >
+                    + Agregar pasajero
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Comentario adicional</label>
+                  <textarea
+                    placeholder="Alguna indicación especial..."
+                    value={comentario}
+                    onChange={e => setComentario(e.target.value)}
+                    rows={2}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Nota del voucher (opcional)</label>
@@ -303,11 +474,12 @@ export default function PaymentModal({ onClose }: Props) {
 interface CardPaymentFormProps {
   totalPrice: number
   tourNames?: string[]
+  items: any[]
 }
 
 type CardStep = 'form' | 'processing' | 'success' | 'error'
 
-function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
+function CardPaymentForm({ totalPrice, tourNames = [], items }: CardPaymentFormProps) {
   const [step, setStep]           = useState<CardStep>('form')
   const [email, setEmail]         = useState('')
   const [cardNumber, setCardNumber] = useState('')
@@ -384,15 +556,20 @@ function CardPaymentForm({ totalPrice, tourNames = [] }: CardPaymentFormProps) {
       const purchaseData = {
         name: holderName || 'Sin especificar',
         email,
+        dni: '', // Para tarjetas no tenemos DNI separado
         method: 'Tarjeta de crédito/débito',
         tours: tourNames.join('; '),
-        totalPersons: 1, // No tenemos este dato en el flujo de tarjeta
-        travelDate: '',
+        totalPersons: items.reduce((sum: number, item: any) => sum + item.quantity, 0),
+        travelDate: items.map(item => item.travelDate).join('; '),
         totalPrice: reserveAmount.toFixed(2),
         reserveAmount: reserveAmount.toFixed(2),
         paymentStatus: 'Pagado',
         note: '',
         phone: '',
+        embarque: '',
+        habitacion: '',
+        comentario: '',
+        passengers: [],
         culqiId: result.chargeId || ''
       }
 
