@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "bash build-vercel.sh",
   "builds": [
     {
       "src": "api/index.mjs",
