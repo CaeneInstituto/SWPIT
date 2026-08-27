@@ -17,7 +17,11 @@
       "dest": "/api/index.mjs"
     },
     {
-      "src": "/(.*)",
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "^/[^.]+$",
       "dest": "/index.html"
     }
   ]
