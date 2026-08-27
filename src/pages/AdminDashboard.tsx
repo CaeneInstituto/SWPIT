@@ -226,7 +226,7 @@ export default function AdminDashboard() {
 
   const checkDBStatus = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/health')
+      const res = await fetch('/api/health')
       const data = await res.json()
       setDbStatus(data.mongo?.includes('conectado') ? 'connected' : 'disconnected')
     } catch {
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
 
   const loadTestimonials = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/testimonials')
+      const res = await fetch('/api/testimonials')
       const data = await res.json()
       if (data.ok) {
         setTestimonials(data.testimonials)
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
   const loadPurchases = async () => {
     setLoadingPurchases(true)
     try {
-      const res = await fetch('http://localhost:3001/api/compras')
+      const res = await fetch('/api/compras')
       const data = await res.json()
       if (data.ok) {
         setPurchases(data.compras)
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
     if (!window.confirm('¿Estás seguro de eliminar este testimonio?')) return
     
     try {
-      const res = await fetch(`http://localhost:3001/api/testimonials/${id}`, {
+      const res = await fetch(`/api/testimonials/${id}`, {
         method: 'DELETE'
       })
       const data = await res.json()
@@ -3202,8 +3202,8 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
     try {
       const method = testimonial ? 'PUT' : 'POST'
       const url = testimonial 
-        ? `http://localhost:3001/api/testimonials/${testimonial._id}`
-        : 'http://localhost:3001/api/testimonials'
+        ? `/api/testimonials/${testimonial._id}`
+        : '/api/testimonials'
 
       const body = {
         ...formData,

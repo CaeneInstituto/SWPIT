@@ -4,7 +4,7 @@ import jsPDF from 'jspdf'
 
 // Claves Culqi (se cargan desde .env)
 const CULQI_PUBLIC_KEY = (import.meta as any).env?.VITE_CULQI_PUBLIC_KEY || 'pk_test_XXXXXXXXXXXXXXXX'
-const API_URL          = (import.meta as any).env?.VITE_API_URL          || 'http://localhost:3001'
+const API_URL          = (import.meta as any).env?.VITE_API_URL ?? ''
 const WHATSAPP_NUMBER  = '51929648380'
 
 const PAYMENT_INFO = {

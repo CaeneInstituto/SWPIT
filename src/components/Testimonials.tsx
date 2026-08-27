@@ -70,7 +70,7 @@ export default function Testimonials() {
 
   const fetchTestimonials = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/testimonials')
+      const res = await fetch('/api/testimonials')
       const data = await res.json()
       
       if (data.ok && data.testimonials.length > 0) {
