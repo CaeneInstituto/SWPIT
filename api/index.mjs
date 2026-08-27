@@ -52,18 +52,17 @@ app.use(cors())
 app.use(express.json())
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/api/health', async (_req, res) => {
-  await connectDB()
+app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     mongo:  db ? '✅ conectado' : '❌ desconectado',
     culqi:  CULQI_SECRET_KEY.startsWith('sk_live') ? '🟢 LIVE' : '🧪 TEST',
+    mongoUri: MONGODB_URI ? '✅ configurado' : '❌ NO configurado'
   })
 })
 
 // ── POST /api/charge ──────────────────────────────────────────────────────────
 app.post('/api/charge', async (req, res) => {
-  await connectDB()
   const { token, amount, email, description, metadata, buyerName, items } = req.body
 
   if (!token || !amount || !email) {
@@ -123,7 +122,6 @@ app.post('/api/charge', async (req, res) => {
 
 // ── GET /api/compras ──────────────────────────────────────────────────────────
 app.get('/api/compras', async (_req, res) => {
-  await connectDB()
   if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
   try {
     const compras = await db.collection('compras')
@@ -139,7 +137,6 @@ app.get('/api/compras', async (_req, res) => {
 
 // ── POST /api/save-purchase ───────────────────────────────────────────────────
 app.post('/api/save-purchase', async (req, res) => {
-  await connectDB()
   if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
 
   const {
@@ -185,19 +182,18 @@ app.post('/api/save-purchase', async (req, res) => {
 
 // ── Testimonials ──────────────────────────────────────────────────────────────
 app.get('/api/testimonials', async (_req, res) => {
-  await connectDB()
-  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible', detail: 'Verifica MONGODB_URI en variables de entorno' })
   try {
     const testimonials = await db.collection('testimonials')
       .find({}).sort({ createdAt: -1 }).toArray()
     res.json({ ok: true, testimonials })
   } catch (err) {
+    console.error('Error /api/testimonials:', err)
     res.status(500).json({ error: 'Error al obtener testimonios' })
   }
 })
 
 app.post('/api/testimonials', async (req, res) => {
-  await connectDB()
   if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
   const { name, location, text, stars, avatar } = req.body
   if (!name || !location || !text || !stars) {
@@ -217,7 +213,6 @@ app.post('/api/testimonials', async (req, res) => {
 })
 
 app.put('/api/testimonials/:id', async (req, res) => {
-  await connectDB()
   if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
   const { id } = req.params
   const { name, location, text, stars, avatar } = req.body
@@ -239,7 +234,6 @@ app.put('/api/testimonials/:id', async (req, res) => {
 })
 
 app.delete('/api/testimonials/:id', async (req, res) => {
-  await connectDB()
   if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
   const { id } = req.params
   try {
@@ -252,5 +246,8 @@ app.delete('/api/testimonials/:id', async (req, res) => {
   }
 })
 
-// ── Export para Vercel ────────────────────────────────────────────────────────
-export default app
+// ── Export para Vercel Serverless ─────────────────────────────────────────────
+export default async function handler(req, res) {
+  await connectDB()
+  return app(req, res)
+}
