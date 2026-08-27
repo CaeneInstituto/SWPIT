@@ -773,8 +773,8 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
     const doc = new jsPDF()
     
     // Colores
-    const primaryColor = [10, 108, 111] // #0A6C6F
-    const grayColor = [100, 100, 100]
+    const primaryColor: [number, number, number] = [10, 108, 111] // #0A6C6F
+    const grayColor: [number, number, number] = [100, 100, 100]
     
     // Header con logo/título
     doc.setFillColor(...primaryColor)
