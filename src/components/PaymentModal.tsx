@@ -778,17 +778,14 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
     initializeCulqi()
 
     // Abrir el checkout de Culqi
-    const orderId = `ORD${Date.now().toString().slice(-10)}`
+    // order debe ser string o número según Culqi V4
+    const orderId = Date.now().toString()
     
     window.Culqi.settings({
       title: 'Peru In Travel',
       currency: 'PEN',
       amount: Math.round(reserveAmount * 100), // Culqi espera céntimos
-      order: {
-        id: orderId,
-        amount: Math.round(reserveAmount * 100),
-        currency: 'PEN'
-      }
+      order: orderId
     })
     
     window.Culqi.options({
