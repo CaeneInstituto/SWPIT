@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "bash build-vercel.sh",
+  "buildCommand": "npm run build",
   "builds": [
     {
       "src": "api/index.mjs",
@@ -25,5 +25,8 @@
       "src": "^/[^.]+$",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_API_URL": ""
+  }
 }
