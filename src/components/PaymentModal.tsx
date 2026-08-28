@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext'
 import jsPDF from 'jspdf'
 
 // Claves Culqi (se cargan desde .env)
-const CULQI_PUBLIC_KEY = (import.meta as any).env?.VITE_CULQI_PUBLIC_KEY || 'pk_live_qjihfKxV9kASv6J0'
+const CULQI_PUBLIC_KEY = (import.meta as any).env?.VITE_CULQI_PUBLIC_KEY || 'pk_test_foBlu9NBJohtJoob'
 const API_URL          = (import.meta as any).env?.VITE_API_URL || '' // Si está vacío, usará rutas relativas
 const WHATSAPP_NUMBER  = '51929648380'
 
