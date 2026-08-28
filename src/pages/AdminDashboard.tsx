@@ -1032,7 +1032,7 @@ export default function AdminDashboard() {
 
                           {/* Detalles - Botón expandir */}
                           <div className="col-span-1 flex items-center justify-center">
-                            {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario ? (
+                            {(purchase.metadata?.pasajeros) || purchase.metadata?.comentario ? (
                               <button 
                                 onClick={() => {
                                   const row = document.getElementById(`details-${purchase._id}`)
@@ -1054,18 +1054,26 @@ export default function AdminDashboard() {
                         {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario ? (
                           <div id={`details-${purchase._id}`} style={{ display: 'none' }} className="mt-4 pt-4 border-t border-gray-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-gray-50 rounded-lg p-4">
-                              {purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0 && (
+                              {purchase.metadata?.pasajeros && (
                                 <div>
                                   <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                    👥 Pasajeros ({purchase.metadata.pasajeros.length})
+                                    👥 Pasajeros
                                   </div>
                                   <div className="space-y-1.5">
-                                    {purchase.metadata.pasajeros.map((p: any, i: number) => (
-                                      <div key={i} className="text-gray-600 bg-white rounded px-2 py-1">
-                                        <span className="font-medium">{i + 1}.</span> {p.nombre || 'Sin nombre'} 
-                                        <span className="text-gray-500"> • DNI: {p.dni || 'N/A'} • Edad: {p.edad || 'N/A'}</span>
+                                    {Array.isArray(purchase.metadata.pasajeros) ? (
+                                      // Si es array (formato nuevo)
+                                      purchase.metadata.pasajeros.map((p: any, i: number) => (
+                                        <div key={i} className="text-gray-600 bg-white rounded px-2 py-1">
+                                          <span className="font-medium">{i + 1}.</span> {p.nombre || 'Sin nombre'} 
+                                          <span className="text-gray-500"> • DNI: {p.dni || 'N/A'} • Edad: {p.edad || 'N/A'}</span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      // Si es string (formato antiguo)
+                                      <div className="text-gray-600 bg-white rounded px-2 py-1">
+                                        {purchase.metadata.pasajeros}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
                                 </div>
                               )}
