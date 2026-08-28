@@ -135,7 +135,7 @@ export default async function handler(req, res) {
           let realPrice = null
           
           if (tour.priceOptions && Array.isArray(tour.priceOptions)) {
-            const option = tour.priceOptions.find((opt: any) => opt.label === priceOption)
+            const option = tour.priceOptions.find(opt => opt.label === priceOption)
             if (option && option.price) {
               // Extraer el número del precio (ej: "S/ 145" -> 145)
               const priceMatch = option.price.match(/(\d+(?:\.\d+)?)/)
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
           message: 'Pago procesado correctamente'
         })
         
-      } catch (error: any) {
+      } catch (error) {
         console.error('❌ Error en /api/charge:', error)
         return json(res, 500, { 
           error: 'Error al procesar el pago',
