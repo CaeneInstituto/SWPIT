@@ -681,6 +681,12 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       } else if (window.Culqi.error) {
         // Error al generar token
         console.error('❌ Error Culqi:', window.Culqi.error)
+        
+        // Cerrar el modal de Culqi
+        if (window.Culqi.close) {
+          window.Culqi.close()
+        }
+        
         setErrorMsg(window.Culqi.error.user_message || 'Error al procesar la tarjeta')
         setStep('error')
         setIsProcessing(false)
@@ -738,6 +744,11 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       const finalChargeId = result.chargeId || 'culqi-' + Date.now()
       setChargeId(finalChargeId)
 
+      // Cerrar el modal de Culqi
+      if (window.Culqi && window.Culqi.close) {
+        window.Culqi.close()
+      }
+
       // Notificar éxito al componente padre
       onSuccess({
         chargeId: finalChargeId,
@@ -755,6 +766,12 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       setIsProcessing(false)
     } catch (err: any) {
       console.error('❌ Error en pago:', err)
+      
+      // Cerrar el modal de Culqi en caso de error
+      if (window.Culqi && window.Culqi.close) {
+        window.Culqi.close()
+      }
+      
       setErrorMsg(err.message || 'Error inesperado. Intenta nuevamente.')
       setStep('error')
       setIsProcessing(false)
