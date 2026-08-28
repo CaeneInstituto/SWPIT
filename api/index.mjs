@@ -65,44 +65,196 @@ export default async function handler(req, res) {
 
     // ── POST /api/charge ──────────────────────────────────────────────────────
     if (req.method === 'POST' && url === '/api/charge') {
-      const { token, amount, email, description, metadata, buyerName, items } = await readBody(req)
-      if (!token || !amount || !email) return json(res, 400, { error: 'Faltan campos: token, amount, email' })
-
-      const culqiRes = await fetch('https://api.culqi.com/v2/charges', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${CULQI_SECRET_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: Math.round(amount * 100),
-          currency_code: 'PEN',
-          email,
-          source_id: token,
-          description: description || 'Reserva Peru In Travel',
-          metadata: metadata || {},
-        }),
-      })
-      const charge = await culqiRes.json()
-      if (charge.object === 'error') return json(res, 400, { error: charge.user_message || 'Error en Culqi' })
+      const body = await readBody(req)
+      const { token, email, buyerName, description, metadata, items, orderId } = body
+      
+      if (!token || !email) {
+        return json(res, 400, { error: 'Faltan campos requeridos: token, email' })
+      }
+      
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return json(res, 400, { error: 'Faltan items del carrito' })
+      }
 
       try {
         const db = await getDb()
-        await db.collection('compras').insertOne({
+        
+        // ════════════════════════════════════════════════════════════════════════
+        // PROTECCIÓN CONTRA DOBLE COBRO (IDEMPOTENCIA)
+        // ════════════════════════════════════════════════════════════════════════
+        // Verificar si ya existe una compra con el mismo token (los tokens son de un solo uso)
+        const existingCharge = await db.collection('compras').findOne({ 
+          'culqiData.token': token 
+        })
+        
+        if (existingCharge) {
+          console.log('⚠️ Token ya utilizado, devolviendo compra existente:', existingCharge.chargeId)
+          return json(res, 200, { 
+            ok: true, 
+            success: true,
+            chargeId: existingCharge.chargeId,
+            amount: existingCharge.amount,
+            message: 'Pago ya procesado anteriormente',
+            isDuplicate: true
+          })
+        }
+        
+        // Si se proporciona orderId, verificar que no exista
+        if (orderId) {
+          const existingOrder = await db.collection('compras').findOne({ orderId })
+          if (existingOrder) {
+            console.log('⚠️ Orden duplicada detectada:', orderId)
+            return json(res, 409, { 
+              error: 'Esta orden ya fue procesada',
+              chargeId: existingOrder.chargeId
+            })
+          }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // CALCULAR MONTO REAL DESDE BASE DE DATOS (SEGURIDAD)
+        // ════════════════════════════════════════════════════════════════════════
+        let totalAmount = 0
+        const processedItems = []
+        
+        for (const item of items) {
+          const { tourId, priceOption, quantity, personsPerPackage } = item
+          
+          if (!tourId || !priceOption || !quantity) {
+            return json(res, 400, { error: `Item inválido: falta tourId, priceOption o quantity` })
+          }
+          
+          // Buscar el tour en la base de datos
+          const tour = await db.collection('tours').findOne({ id: tourId })
+          
+          if (!tour) {
+            return json(res, 404, { error: `Tour no encontrado: ${tourId}` })
+          }
+          
+          // Buscar el precio real en las opciones del tour
+          let realPrice = null
+          
+          if (tour.priceOptions && Array.isArray(tour.priceOptions)) {
+            const option = tour.priceOptions.find((opt: any) => opt.label === priceOption)
+            if (option && option.price) {
+              // Extraer el número del precio (ej: "S/ 145" -> 145)
+              const priceMatch = option.price.match(/(\d+(?:\.\d+)?)/)
+              if (priceMatch) {
+                realPrice = parseFloat(priceMatch[1])
+              }
+            }
+          }
+          
+          // Fallback: usar priceValue del tour si no hay priceOptions
+          if (realPrice === null && tour.priceValue) {
+            realPrice = tour.priceValue
+          }
+          
+          if (realPrice === null || realPrice <= 0) {
+            return json(res, 400, { error: `No se pudo determinar el precio del tour: ${tour.name}` })
+          }
+          
+          // Calcular subtotal (precio * cantidad de paquetes)
+          const subtotal = realPrice * quantity
+          totalAmount += subtotal
+          
+          processedItems.push({
+            tourId: tour.id,
+            tourName: tour.name,
+            priceOption,
+            realPrice,
+            quantity,
+            personsPerPackage: personsPerPackage || 1,
+            subtotal
+          })
+        }
+        
+        // Validar que el monto sea mayor a 0
+        if (totalAmount <= 0) {
+          return json(res, 400, { error: 'El monto total debe ser mayor a 0' })
+        }
+        
+        console.log('💰 Monto calculado desde BD:', totalAmount, 'PEN')
+        console.log('📦 Items procesados:', processedItems)
+
+        // ════════════════════════════════════════════════════════════════════════
+        // CREAR CARGO EN CULQI
+        // ════════════════════════════════════════════════════════════════════════
+        const culqiRes = await fetch('https://api.culqi.com/v2/charges', {
+          method: 'POST',
+          headers: { 
+            Authorization: `Bearer ${CULQI_SECRET_KEY}`, 
+            'Content-Type': 'application/json' 
+          },
+          body: JSON.stringify({
+            amount: Math.round(totalAmount * 100), // Culqi espera céntimos
+            currency_code: 'PEN',
+            email,
+            source_id: token,
+            description: description || 'Reserva Peru In Travel',
+            metadata: {
+              ...metadata,
+              montoCalculadoBackend: totalAmount,
+              cantidadItems: items.length,
+              orderId: orderId || `order-${Date.now()}`
+            },
+          }),
+        })
+        
+        const charge = await culqiRes.json()
+        
+        if (charge.object === 'error') {
+          console.error('❌ Error Culqi:', charge)
+          return json(res, 400, { 
+            error: charge.user_message || charge.merchant_message || 'Error al procesar el pago' 
+          })
+        }
+        
+        console.log('✅ Cargo Culqi exitoso:', charge.id)
+
+        // ════════════════════════════════════════════════════════════════════════
+        // REGISTRAR COMPRA EN MONGODB (UNA SOLA VEZ)
+        // ════════════════════════════════════════════════════════════════════════
+        const compra = {
           chargeId: charge.id,
-          amount, currency: 'PEN',
-          status: charge.outcome?.type || 'unknown',
-          email, buyerName: buyerName || '',
-          description: description || '',
-          items: items || [],
+          orderId: orderId || `order-${Date.now()}`,
+          amount: totalAmount,
+          currency: 'PEN',
+          status: charge.outcome?.type || 'venta',
+          email,
+          buyerName: buyerName || '',
+          description: description || 'Reserva Peru In Travel',
+          items: processedItems,
           metadata: metadata || {},
           createdAt: new Date(),
-          card: charge.source ? {
-            brand: charge.source.brand,
-            last4: charge.source.last_four,
-            country: charge.source.issuer?.country,
-          } : null,
-        })
-      } catch (e) { console.error('MongoDB save error:', e.message) }
+          culqiData: {
+            token, // Guardar token para prevenir reutilización
+            brand: charge.source?.brand,
+            last4: charge.source?.last_four,
+            country: charge.source?.issuer?.country,
+            cardType: charge.source?.card_type
+          },
+          paymentMethod: 'Tarjeta de crédito/débito - Culqi'
+        }
+        
+        await db.collection('compras').insertOne(compra)
+        console.log('✅ Compra registrada en MongoDB')
 
-      return json(res, 200, { ok: true, chargeId: charge.id })
+        return json(res, 200, { 
+          ok: true, 
+          success: true,
+          chargeId: charge.id,
+          amount: totalAmount,
+          message: 'Pago procesado correctamente'
+        })
+        
+      } catch (error: any) {
+        console.error('❌ Error en /api/charge:', error)
+        return json(res, 500, { 
+          error: 'Error al procesar el pago',
+          details: error.message 
+        })
+      }
     }
 
     // ── GET /api/compras ──────────────────────────────────────────────────────

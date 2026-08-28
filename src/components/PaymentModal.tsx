@@ -3,9 +3,14 @@ import { useCart } from '../context/CartContext'
 import jsPDF from 'jspdf'
 
 // Claves Culqi (se cargan desde .env)
-const CULQI_PUBLIC_KEY = (import.meta as any).env?.VITE_CULQI_PUBLIC_KEY || 'pk_test_foBlu9NBJohtJoob'
+const CULQI_PUBLIC_KEY = (import.meta as any).env?.VITE_CULQI_PUBLIC_KEY
 const API_URL          = (import.meta as any).env?.VITE_API_URL || '' // Si está vacío, usará rutas relativas
 const WHATSAPP_NUMBER  = '51929648380'
+
+// Validar que existe la Public Key
+if (!CULQI_PUBLIC_KEY) {
+  console.error('❌ VITE_CULQI_PUBLIC_KEY no está configurada en las variables de entorno')
+}
 
 const PAYMENT_INFO = {
   yape:     { number: '+51 929 648 380', name: 'Peru In Travel' },
@@ -22,6 +27,14 @@ type PaymentMethod = 'yape' | 'plin' | 'transfer' | 'card'
 type ModalStep     = 'method' | 'instructions' | 'confirm' | 'passengers'
 
 interface Props { onClose: () => void }
+
+// Declarar tipo de Culqi global
+declare global {
+  interface Window {
+    Culqi: any
+    culqi: () => void
+  }
+}
 
 export default function PaymentModal({ onClose }: Props) {
   const { items, totalPrice, clearCart, setCartOpen } = useCart()
@@ -104,15 +117,17 @@ export default function PaymentModal({ onClose }: Props) {
       passengers: passengers.filter(p => p.nombre || p.dni || p.edad) // Solo pasajeros con datos
     }
 
-    // Guardar en BD
-    try {
-      await fetch(`${API_URL}/api/save-purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(purchaseData)
-      })
-    } catch (error) {
-      console.error('Error guardando compra:', error)
+    // Guardar en BD solo para métodos manuales (NO para tarjeta, eso lo hace /api/charge)
+    if (method !== 'card') {
+      try {
+        await fetch(`${API_URL}/api/save-purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        })
+      } catch (error) {
+        console.error('Error guardando compra:', error)
+      }
     }
 
     // Construir mensaje de WhatsApp
@@ -579,7 +594,7 @@ export default function PaymentModal({ onClose }: Props) {
 }
 
 // ==============================================================================
-// COMPONENTE CardPaymentForm (Integración real con Culqi)
+// COMPONENTE CardPaymentForm (Integración con CulqiJS)
 // ==============================================================================
 
 interface CardPaymentFormProps {
@@ -605,12 +620,10 @@ type CardStep = 'form' | 'client-data' | 'processing' | 'success' | 'error'
 function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardPaymentFormProps) {
   const [step, setStep]           = useState<CardStep>('form')
   const [email, setEmail]         = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiryDate, setExpiryDate] = useState('')
-  const [cvv, setCvv]             = useState('')
   const [holderName, setHolderName] = useState('')
   const [errorMsg, setErrorMsg]   = useState('')
   const [chargeId, setChargeId]   = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
   
   // Datos adicionales del cliente
   const [phone, setPhone]         = useState('')
@@ -643,111 +656,89 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
   const reserveAmount    = totalPrice // 100% para tarjeta
   const reserveAmountStr = reserveAmount.toFixed(2)
 
-  // Formateadores
-  const formatCardNumber = (v: string) => {
-    const digits = v.replace(/\D/g, '').substring(0, 16)
-    return digits.replace(/(.{4})/g, '$1 ').trim()
-  }
-  const formatExpiry = (v: string) => {
-    const digits = v.replace(/\D/g, '').substring(0, 4)
-    if (digits.length >= 3) return digits.substring(0, 2) + '/' + digits.substring(2)
-    return digits
-  }
-  const formatCvv = (v: string) => v.replace(/\D/g, '').substring(0, 4)
+  // Inicializar Culqi y manejar el callback
+  const initializeCulqi = () => {
+    if (!window.Culqi) {
+      setErrorMsg('Error: Culqi no está cargado. Recarga la página.')
+      return
+    }
 
-  const handleCardValidation = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.includes('@')) { setErrorMsg('Ingresa un email válido'); return }
-    if (cardNumber.replace(/\s/g, '').length < 13) { setErrorMsg('Número de tarjeta inválido'); return }
-    if (!expiryDate.includes('/')) { setErrorMsg('Fecha de vencimiento inválida'); return }
-    if (cvv.length < 3) { setErrorMsg('CVV inválido'); return }
-    if (!holderName.trim()) { setErrorMsg('Ingresa el nombre del titular'); return }
+    if (!CULQI_PUBLIC_KEY) {
+      setErrorMsg('Error de configuración: falta la clave pública de Culqi')
+      return
+    }
+
+    // Configurar Culqi
+    window.Culqi.publicKey = CULQI_PUBLIC_KEY
     
-    setErrorMsg('')
-    setStep('client-data')
+    // Definir el callback que Culqi llamará después de tokenizar
+    window.culqi = function() {
+      if (window.Culqi.token) {
+        // Token generado exitosamente
+        const token = window.Culqi.token.id
+        console.log('✅ Token Culqi generado:', token)
+        processPayment(token)
+      } else if (window.Culqi.error) {
+        // Error al generar token
+        console.error('❌ Error Culqi:', window.Culqi.error)
+        setErrorMsg(window.Culqi.error.user_message || 'Error al procesar la tarjeta')
+        setStep('error')
+        setIsProcessing(false)
+      }
+    }
   }
 
-  const handleSubmit = async () => {
-    setStep('processing')
-    setErrorMsg('')
-
+  // Procesar el pago con el token
+  const processPayment = async (token: string) => {
     try {
-      const [expMonth, expYearShort] = expiryDate.split('/')
-      const expYear = expYearShort ? `20${expYearShort}` : ''
-
-      // Crear token usando fetch directo al endpoint seguro de Culqi
-      const tokenResponse = await fetch('https://secure.culqi.com/v2/tokens', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${CULQI_PUBLIC_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          card_number: cardNumber.replace(/\s/g, ''),
-          cvv,
-          expiration_month: expMonth,
-          expiration_year: expYear,
-          email
-        })
-      })
-
-      const tokenData = await tokenResponse.json()
+      console.log('Enviando token al backend...')
       
-      if (tokenData.object === 'error' || !tokenData.id) {
-        throw new Error(tokenData.user_message || tokenData.merchant_message || 'Error al procesar la tarjeta')
-      }
-
-      // Enviar token al backend para crear el cargo
+      // Generar orderId único para idempotencia
+      const orderId = `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      
+      // Enviar token y datos de tours al backend
       const response = await fetch(`${API_URL}/api/charge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token:       tokenData.id,
-          amount:      reserveAmount,
+          token,
+          orderId, // ID único para prevenir doble cobro
           email,
+          buyerName: holderName,
           description: tourNames.length ? `Reserva: ${tourNames.join(', ')}` : 'Reserva Peru In Travel',
-          metadata:    { paquetes: tourNames.join(' | '), tipo: 'Pago completo' },
+          metadata: {
+            paquetes: tourNames.join(' | '),
+            tipo: 'Pago completo',
+            telefono: phone,
+            dni,
+            embarque,
+            habitacion,
+            comentario,
+            pasajeros: passengers.filter(p => p.nombre || p.dni).map(p => `${p.nombre} (${p.dni})`).join(', ')
+          },
+          items: items.map(item => ({
+            tourId: item.tourId || item.id,
+            tourName: item.tourName,
+            priceOption: item.priceOption,
+            quantity: item.quantity,
+            personsPerPackage: item.personsPerPackage || 1,
+            travelDate: item.travelDate
+          }))
         }),
       })
 
       const result = await response.json()
-      if (!response.ok || result.error) throw new Error(result.error || 'Error al procesar el pago')
-
-      // Guardar compra con todos los datos
-      const purchaseData = {
-        name: holderName || 'Sin especificar',
-        email,
-        dni: dni || '',
-        phone: phone || '',
-        method: 'Tarjeta de crédito/débito',
-        tours: tourNames.join('; '),
-        totalPersons: totalPersonsFromCart,
-        travelDate: items.map(item => item.travelDate).join('; '),
-        totalPrice: reserveAmount.toFixed(2),
-        reserveAmount: reserveAmount.toFixed(2),
-        paymentStatus: 'Pagado',
-        note: '',
-        embarque: embarque || '',
-        habitacion: habitacion || '',
-        comentario: comentario || '',
-        passengers: passengers.filter(p => p.nombre || p.dni || p.edad),
-        culqiId: result.chargeId || ''
+      
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Error al procesar el pago')
       }
 
-      try {
-        await fetch(`${API_URL}/api/save-purchase`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(purchaseData)
-        })
-      } catch (error) {
-        console.error('Error guardando compra:', error)
-      }
-
+      console.log('✅ Pago procesado exitosamente:', result)
+      
       const finalChargeId = result.chargeId || 'culqi-' + Date.now()
       setChargeId(finalChargeId)
 
-      // Notificar al modal principal para pasar al paso "confirmar"
+      // Notificar éxito al componente padre
       onSuccess({
         chargeId: finalChargeId,
         email,
@@ -760,187 +751,53 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         passengers: passengers.filter(p => p.nombre || p.dni || p.edad),
         amount: reserveAmountStr,
       })
+      
+      setIsProcessing(false)
     } catch (err: any) {
-      console.error('Error en pago:', err)
+      console.error('❌ Error en pago:', err)
       setErrorMsg(err.message || 'Error inesperado. Intenta nuevamente.')
       setStep('error')
+      setIsProcessing(false)
     }
   }
 
-  // Función para generar PDF del voucher
-  const generateVoucherPDF = () => {
-    const doc = new jsPDF()
+  // Abrir Culqi Checkout
+  const openCulqiCheckout = () => {
+    if (isProcessing) return // Prevenir doble click
     
-    // Colores
-    const primaryColor: [number, number, number] = [10, 108, 111] // #0A6C6F
-    const grayColor: [number, number, number] = [100, 100, 100]
-    
-    // Header con logo/título
-    doc.setFillColor(...primaryColor)
-    doc.rect(0, 0, 210, 35, 'F')
-    
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(24)
-    doc.setFont('helvetica', 'bold')
-    doc.text('PERU IN TRAVEL', 105, 15, { align: 'center' })
-    
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Voucher de Reserva', 105, 25, { align: 'center' })
-    
-    // Información principal
-    doc.setTextColor(...grayColor)
-    doc.setFontSize(10)
-    let yPos = 50
-    
-    // ID de transacción
-    doc.setFont('helvetica', 'bold')
-    doc.text('ID de Transacción:', 20, yPos)
-    doc.setFont('helvetica', 'normal')
-    doc.text(chargeId, 70, yPos)
-    yPos += 10
-    
-    // Email
-    doc.setFont('helvetica', 'bold')
-    doc.text('Email:', 20, yPos)
-    doc.setFont('helvetica', 'normal')
-    doc.text(email, 70, yPos)
-    yPos += 10
-    
-    // Nombre
-    doc.setFont('helvetica', 'bold')
-    doc.text('Nombre:', 20, yPos)
-    doc.setFont('helvetica', 'normal')
-    doc.text(holderName, 70, yPos)
-    yPos += 10
-    
-    // DNI
-    if (dni) {
-      doc.setFont('helvetica', 'bold')
-      doc.text('DNI:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      doc.text(dni, 70, yPos)
-      yPos += 10
+    if (!email || !holderName) {
+      setErrorMsg('Por favor completa todos los campos requeridos')
+      return
     }
-    
-    // Teléfono
-    if (phone) {
-      doc.setFont('helvetica', 'bold')
-      doc.text('Teléfono:', 20, yPos)
-      doc.setFont('helvetica', 'normal')
-      doc.text(phone, 70, yPos)
-      yPos += 10
-    }
-    
-    // Fecha
-    doc.setFont('helvetica', 'bold')
-    doc.text('Fecha de pago:', 20, yPos)
-    doc.setFont('helvetica', 'normal')
-    doc.text(new Date().toLocaleString('es-PE'), 70, yPos)
-    yPos += 15
-    
-    // Línea separadora
-    doc.setDrawColor(...primaryColor)
-    doc.setLineWidth(0.5)
-    doc.line(20, yPos, 190, yPos)
-    yPos += 10
-    
-    // Detalle de tours
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('Detalle de la Reserva', 20, yPos)
-    yPos += 10
-    
-    doc.setFontSize(10)
-    doc.setTextColor(...grayColor)
-    
-    items.forEach((item, index) => {
-      doc.setFont('helvetica', 'bold')
-      doc.text(`${index + 1}. ${item.tourName}`, 20, yPos)
-      yPos += 6
-      
-      doc.setFont('helvetica', 'normal')
-      doc.text(`   Opción: ${item.priceOption}`, 25, yPos)
-      yPos += 5
-      doc.text(`   Personas: ${item.quantity}`, 25, yPos)
-      yPos += 5
-      doc.text(`   Fecha de viaje: ${item.travelDate}`, 25, yPos)
-      yPos += 5
-      doc.text(`   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}`, 25, yPos)
-      yPos += 8
+
+    setIsProcessing(true)
+    setStep('processing')
+    setErrorMsg('')
+
+    // Inicializar Culqi
+    initializeCulqi()
+
+    // Abrir el checkout de Culqi
+    window.Culqi.settings({
+      title: 'Peru In Travel',
+      currency: 'PEN',
+      amount: Math.round(reserveAmount * 100), // Culqi espera céntimos
+      order: `order-${Date.now()}`,
     })
     
-    // Información adicional
-    if (embarque || habitacion) {
-      yPos += 5
-      doc.setFontSize(12)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...primaryColor)
-      doc.text('Información Adicional', 20, yPos)
-      yPos += 8
-      
-      doc.setFontSize(10)
-      doc.setTextColor(...grayColor)
-      doc.setFont('helvetica', 'normal')
-      
-      if (embarque) {
-        doc.text(`📍 Punto de embarque: ${embarque}`, 20, yPos)
-        yPos += 6
+    window.Culqi.options({
+      lang: 'es',
+      modal: true,
+      style: {
+        logo: 'https://swpit.vercel.app/logo.png',
+        maincolor: '#0A6C6F',
+        buttontext: '#ffffff',
+        maintext: '#4A4A4A',
+        desctext: '#4A4A4A'
       }
-      if (habitacion) {
-        doc.text(`🛏️ Tipo de habitación: ${habitacion}`, 20, yPos)
-        yPos += 6
-      }
-    }
-    
-    // Total
-    yPos += 5
-    doc.setDrawColor(...primaryColor)
-    doc.line(20, yPos, 190, yPos)
-    yPos += 10
-    
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...primaryColor)
-    doc.text('TOTAL PAGADO:', 20, yPos)
-    doc.text(`S/ ${reserveAmountStr}`, 190, yPos, { align: 'right' })
-    yPos += 15
-    
-    // Footer
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...grayColor)
-    doc.text('Gracias por confiar en Peru In Travel', 105, yPos + 10, { align: 'center' })
-    doc.text('WhatsApp: +51 929 648 380', 105, yPos + 15, { align: 'center' })
-    doc.text('www.peruintravel.com', 105, yPos + 20, { align: 'center' })
-    
-    // Descargar
-    doc.save(`Voucher-PeruInTravel-${chargeId}.pdf`)
-  }
-  
-  // Función para compartir por WhatsApp
-  const shareViaWhatsApp = () => {
-    const message = `🎉 *¡Reserva Confirmada!*\n\n` +
-      `✅ *Peru In Travel*\n\n` +
-      `📋 *ID:* ${chargeId}\n` +
-      `👤 *Nombre:* ${holderName}\n` +
-      `🆔 *DNI:* ${dni || 'No especificado'}\n` +
-      `📧 *Email:* ${email}\n` +
-      `📱 *Teléfono:* ${phone || 'No especificado'}\n` +
-      `💳 *Monto pagado:* S/ ${reserveAmountStr}\n\n` +
-      `🎒 *Tours reservados:*\n` +
-      items.map((item, i) => 
-        `${i + 1}. ${item.tourName}\n` +
-        `   📅 ${item.travelDate}\n` +
-        `   👥 ${item.quantity} persona(s)\n`
-      ).join('\n') +
-      (embarque ? `\n📍 *Punto de embarque:* ${embarque}\n` : '') +
-      (habitacion ? `🛏️ *Habitación:* ${habitacion}\n` : '') +
-      (comentario ? `💬 *Comentario:* ${comentario}\n` : '') +
-      `\n¡Gracias por confiar en nosotros! 🌄`
-    
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
+    })
+
+    window.Culqi.open()
   }
 
   // ---- Procesando ----
@@ -966,7 +823,10 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         <p className="font-bold text-gray-900">No se pudo procesar el pago</p>
         <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{errorMsg}</p>
         <button
-          onClick={() => setStep('form')}
+          onClick={() => {
+            setStep('form')
+            setIsProcessing(false)
+          }}
           className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
         >
           Intentar nuevamente
@@ -981,7 +841,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       <div className="space-y-4">
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center">
           <p className="text-sm text-green-800">
-            ✅ Datos de la tarjeta validados. Completa tus datos para finalizar la reserva.
+            ✅ Datos validados. Completa la información adicional.
           </p>
         </div>
         
@@ -1075,8 +935,9 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
             className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
             ← Volver
           </button>
-          <button onClick={handleSubmit}
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">
+          <button onClick={openCulqiCheckout}
+            disabled={isProcessing}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
             Pagar S/ {reserveAmountStr} 💳
           </button>
         </div>
@@ -1084,7 +945,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
     )
   }
 
-  // ---- Formulario ----
+  // ---- Formulario inicial ----
   return (
     <div className="space-y-4">
       {/* Header resumen monto */}
@@ -1099,10 +960,10 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         <p className="text-2xl font-extrabold text-indigo-600">S/ {reserveAmountStr}</p>
       </div>
 
-      <form onSubmit={handleCardValidation} className="space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); if (!email || !holderName) { setErrorMsg('Completa todos los campos'); return }; setStep('client-data') }} className="space-y-3">
         {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Correo electrónico</label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Correo electrónico *</label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="tu@correo.com" required
@@ -1110,25 +971,9 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
           />
         </div>
 
-        {/* Número de tarjeta */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Número de tarjeta</label>
-          <div className="relative">
-            <input
-              type="text" value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))}
-              placeholder="1234 5678 9012 3456" maxLength={19} required
-              className="w-full pl-4 pr-20 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 font-mono tracking-widest transition-colors"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-              <div className="w-8 h-5 bg-blue-700 rounded text-white text-[8px] flex items-center justify-center font-bold">VISA</div>
-              <div className="w-8 h-5 bg-red-500 rounded text-white text-[8px] flex items-center justify-center font-bold">MC</div>
-            </div>
-          </div>
-        </div>
-
         {/* Nombre del titular */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Nombre del titular</label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Nombre del titular *</label>
           <input
             type="text" value={holderName} onChange={e => setHolderName(e.target.value.toUpperCase())}
             placeholder="JUAN PÉREZ" required
@@ -1136,33 +981,19 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
           />
         </div>
 
-        {/* Vencimiento + CVV */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Vencimiento</label>
-            <input
-              type="text" value={expiryDate} onChange={e => setExpiryDate(formatExpiry(e.target.value))}
-              placeholder="MM/AA" maxLength={5} required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 text-center font-mono transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">CVV</label>
-            <input
-              type="password" value={cvv} onChange={e => setCvv(formatCvv(e.target.value))}
-              placeholder="•••" maxLength={4} required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 text-center font-mono transition-colors"
-            />
-          </div>
-        </div>
-
         {/* Sello de seguridad */}
         <div className="flex items-center gap-2 text-xs text-gray-400 py-1">
           <svg className="w-4 h-4 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
           </svg>
-          Datos cifrados con SSL · Procesado por Culqi
+          Los datos de tu tarjeta se procesan de forma segura con Culqi
         </div>
+
+        {errorMsg && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+            {errorMsg}
+          </div>
+        )}
 
         {/* Botón continuar */}
         <button
@@ -1178,9 +1009,8 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         <svg className="w-4 h-4 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
         </svg>
-        <p className="text-green-700">Pago seguro procesado por <strong>Culqi</strong> · Tu información está protegida</p>
+        <p className="text-green-700">Pago 100% seguro procesado por <strong>Culqi</strong></p>
       </div>
     </div>
   )
 }
-
