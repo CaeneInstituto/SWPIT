@@ -74,13 +74,13 @@ export default function Destinations() {
     // Filtrar paquetes deshabilitados
     if (t.disabled) return false
     
-    // Validación de campos requeridos (por si vienen de MongoDB sin datos completos)
-    if (!t.name || !t.days || !t.location) return false
+    // Validación mínima: debe tener al menos nombre
+    if (!t.name) return false
     
-    const matchRegion = region === 'Todos' || t.region === region
+    const matchRegion = region === 'Todos' || (t.region && t.region === region)
     
     // Lógica mejorada para filtrado por duración (case-insensitive y flexible)
-    const daysLower = t.days.toLowerCase()
+    const daysLower = (t.days || '').toLowerCase()
     let matchDuration = false
     
     if (duration === 'Todos') {
@@ -109,9 +109,10 @@ export default function Destinations() {
     }
     
     const matchPrice = (t.priceValue || 0) <= maxPrice
-    const matchSearch =
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.location || '').toLowerCase().includes(search.toLowerCase())
+    const searchLower = search.toLowerCase()
+    const matchSearch = !search || 
+      t.name.toLowerCase().includes(searchLower) ||
+      (t.location || '').toLowerCase().includes(searchLower)
     return matchRegion && matchDuration && matchPrice && matchSearch
   })
 
