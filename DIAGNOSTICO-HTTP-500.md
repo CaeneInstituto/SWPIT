@@ -34,34 +34,29 @@ SyntaxError: Unexpected token 'A', "A server e"... is not valid JSON
 
 ## 🔍 Causa Raíz Identificada
 
-### Problema 1: Formato Incorrecto de `MONGODB_URI` (Principal)
+### Problema 1: Variable `MONGODB_URI` Mal Configurada o Ausente en Vercel (Principal)
 
-**Formato actual en `.env` local:**
+**Formato actual en `.env` local (FUNCIONA CORRECTAMENTE):**
 ```bash
 MONGODB_URI=mongodb://peruintravel_user:password@ac-qdcmco8-shard-00-00.z8uepob.mongodb.net:27017,ac-qdcmco8-shard-00-01.z8uepob.mongodb.net:27017,ac-qdcmco8-shard-00-02.z8uepob.mongodb.net:27017/peruintravel?ssl=true&replicaSet=atlas-14csfd-shard-0&authSource=admin&retryWrites=true&w=majority
 ```
 
 **¿Por qué falla en Vercel?**
 
-- El formato `mongodb://` con **shards múltiples manuales** es el formato de **conexión directa** interna de MongoDB Atlas
-- Vercel Serverless tiene **limitaciones de red**:
-  - Cold starts frecuentes
-  - Conexiones pueden timeout más rápido
-  - Resolución DNS puede fallar
-  - Múltiples réplicas requieren abrir múltiples conexiones simultáneas
-- Este formato fue diseñado para aplicaciones que mantienen conexiones persistentes, **NO para funciones serverless**
+**NO es problema del formato** (el formato manual con shards funciona perfectamente, como lo demuestra el ejemplo del usuario).
 
-**Formato recomendado para Vercel:**
+El problema real es que **en Vercel**:
+- ❌ La variable `MONGODB_URI` **no existe** en Environment Variables
+- ❌ La variable tiene **credenciales incorrectas** (usuario/password equivocados)
+- ❌ La variable apunta a un **cluster diferente** o desactualizado
+- ❌ La variable tiene **typo** en el nombre (ej: `MONGO_URI` en vez de `MONGODB_URI`)
+
+**Este formato manual funciona perfectamente en Vercel**, como lo confirma este ejemplo funcional:
 ```bash
-MONGODB_URI=mongodb+srv://peruintravel_user:password@cluster-name.mongodb.net/peruintravel?retryWrites=true&w=majority
+MONGODB_URI=mongodb://Anthonyg:P4ssw0rd.2026@cluster0-shard-00-00.0nj1r.mongodb.net:27017,cluster0-shard-00-01.0nj1r.mongodb.net:27017,cluster0-shard-00-02.0nj1r.mongodb.net:27017/goldfish?ssl=true&replicaSet=atlas-l93wrr-shard-0&authSource=admin&retryWrites=true&w=majority
 ```
 
-**Ventajas del formato SRV (`mongodb+srv://`):**
-- ✅ Resolución automática vía DNS (más compatible con serverless)
-- ✅ Manejo automático de réplicas
-- ✅ Más resiliente ante cambios de infraestructura de MongoDB
-- ✅ Recomendado oficialmente por MongoDB Atlas para aplicaciones serverless
-- ✅ Menos conexiones simultáneas = menos problemas de red
+**Nota:** El formato SRV (`mongodb+srv://`) también funciona si el DNS está correctamente configurado, pero el formato manual es igualmente válido.
 
 ### Problema 2: Falta de Manejo de Errores Específicos
 
@@ -188,42 +183,82 @@ npm run build
 
 ## 🚀 Pasos para Corregir en Vercel
 
-### Opción A: Obtener URI SRV Correcto (RECOMENDADO)
+### Solución: Configurar o Corregir `MONGODB_URI` en Vercel
 
-1. **Ve a MongoDB Atlas:** https://cloud.mongodb.com
-2. **Database → Connect → Connect your application**
-3. **Copia el Connection String formato SRV:**
-   ```
-   mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<dbname>
-   ```
-4. **Reemplaza `<username>`, `<password>` y `<dbname>` con tus valores reales**
-5. **En Vercel:**
-   - Settings → Environment Variables
-   - Edita `MONGODB_URI`
-   - Pega la URI formato SRV
-   - Aplica a: Production, Preview, Development
-   - Save
+El formato manual de MongoDB funciona perfectamente en Vercel. El problema es que la variable **no está configurada correctamente** en las Environment Variables de Vercel.
 
-6. **Redeploy:**
+1. **Ve a Vercel Dashboard:** https://vercel.com/tu-proyecto
+
+2. **Settings → Environment Variables**
+
+3. **Verifica si existe `MONGODB_URI`:**
+   - ✅ Si existe: Edítala
+   - ❌ Si no existe: Créala
+
+4. **Copia la URI correcta desde MongoDB Atlas:**
+   - Ve a MongoDB Atlas → Database → Connect
+   - Selecciona "Connect your application"
+   - Copia la connection string
+   - **Ambos formatos funcionan:**
+
+   **Opción A - Formato SRV (recomendado si el DNS funciona):**
+   ```bash
+   mongodb+srv://peruintravel_user:6ue8SryfQDsNActM@ac-qdcmco8.z8uepob.mongodb.net/peruintravel?retryWrites=true&w=majority
+   ```
+
+   **Opción B - Formato manual (100% funcional en Vercel):**
+   ```bash
+   mongodb://peruintravel_user:6ue8SryfQDsNActM@ac-qdcmco8-shard-00-00.z8uepob.mongodb.net:27017,ac-qdcmco8-shard-00-01.z8uepob.mongodb.net:27017,ac-qdcmco8-shard-00-02.z8uepob.mongodb.net:27017/peruintravel?ssl=true&replicaSet=atlas-14csfd-shard-0&authSource=admin&retryWrites=true&w=majority
+   ```
+
+5. **IMPORTANTE - Verifica los datos:**
+   - ✅ Usuario correcto: `peruintravel_user`
+   - ✅ Password correcta: `6ue8SryfQDsNActM` (o la que corresponda)
+   - ✅ Database name: `peruintravel`
+   - ✅ Cluster: `ac-qdcmco8` o el que corresponda
+
+6. **Aplica la variable a todos los entornos:**
+   - ✅ Production
+   - ✅ Preview
+   - ✅ Development
+
+7. **Save**
+
+8. **Redeploy:**
    ```bash
    git push origin main
    ```
    O en Vercel Dashboard → Deployments → Redeploy
 
-### Opción B: Usar Formato Manual (Temporal)
+### ⚠️ Problemas Comunes
 
-Si el formato SRV no está disponible o hay problemas DNS:
+**Si la URI no funciona:**
 
-1. **En Vercel:**
-   - Settings → Environment Variables
-   - Edita `MONGODB_URI`
-   - Pega el formato manual (el que funciona localmente)
-   - Save
+1. **Verifica credenciales en MongoDB Atlas:**
+   - Database Access → User: `peruintravel_user` existe?
+   - Password es correcta?
+   - User tiene permisos `readWrite` en database `peruintravel`?
 
-2. **Monitorea los logs de Vercel Functions**
-   - Si ves timeouts frecuentes, vuelve a Opción A
+2. **Verifica Network Access:**
+   - Network Access → IP Access List
+   - Debe tener `0.0.0.0/0` (permitir desde cualquier IP)
+   - O agregar IPs de Vercel específicamente
 
-**⚠️ Advertencia:** El formato manual puede tener problemas de timeout en Vercel debido a múltiples réplicas.
+3. **Verifica nombre del cluster:**
+   - Database → View Monitoring
+   - Copia el hostname exacto (ej: `ac-qdcmco8.z8uepob.mongodb.net`)
+
+4. **Prueba localmente primero:**
+   ```bash
+   # Windows PowerShell
+   $env:MONGODB_URI="mongodb://peruintravel_user:password@..."
+   node test-mongodb.mjs
+   ```
+   
+   Debe devolver:
+   ```
+   ✅ Conexión exitosa a MongoDB
+   ```
 
 ---
 
@@ -390,9 +425,11 @@ VITE_CULQI_PUBLIC_KEY=pk_test_xxxxx  # o pk_live_xxxxx
 ## 📝 Conclusiones
 
 ### Causa Exacta del HTTP 500:
-1. **Primaria:** Formato `MONGODB_URI` incompatible con Vercel Serverless
+1. **Primaria:** Variable `MONGODB_URI` **mal configurada o ausente en Vercel**
 2. **Secundaria:** Falta de manejo de errores en endpoints `/api/tours` y `/api/testimonials`
 3. **Terciaria:** Frontend no validaba `response.ok` antes de parsear JSON
+
+**Aclaración importante:** El formato manual de MongoDB URI funciona perfectamente en Vercel. No es necesario cambiar a formato SRV (aunque ambos funcionan). El problema es simplemente que la variable no está correctamente configurada en producción.
 
 ### Archivos Críticos:
 - `api/index.mjs` - líneas 65-76 (GET /api/tours)

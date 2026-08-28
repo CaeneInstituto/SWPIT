@@ -18,8 +18,8 @@ if (!MONGODB_URI) {
 
 // Mostrar formato de URI (sin password)
 const uriFormat = MONGODB_URI.includes('mongodb+srv://') 
-  ? '✅ Formato SRV (recomendado para Vercel Serverless)' 
-  : '⚠️  Formato manual (puede causar problemas en Vercel)'
+  ? '✅ Formato SRV' 
+  : '✅ Formato manual (con shards explícitos)'
 console.log(`Formato: ${uriFormat}`)
 console.log(`URI (oculta): ${MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')}\n`)
 
