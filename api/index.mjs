@@ -215,39 +215,28 @@ export default async function handler(req, res) {
     // ── POST /api/tours ───────────────────────────────────────────────────────
     if (req.method === 'POST' && url === '/api/tours') {
       const body = await readBody(req)
-      const { id, name, price, image, category, duration, groupSize, description,
-        itinerary, included, notIncluded, recommendations, images, videos, documents,
-        boardingPoints, hasAccommodation, accommodationDetails, prices, seasonName } = body
-
-      if (!id || !name) return json(res, 400, { error: 'Faltan campos requeridos: id, name' })
+      
+      // Validar campos mínimos requeridos
+      if (!body.id || !body.name) {
+        return json(res, 400, { error: 'Faltan campos requeridos: id, name' })
+      }
 
       const db = await getDb()
       // Verificar que no exista otro tour con el mismo id
-      const existing = await db.collection('tours').findOne({ id })
-      if (existing) return json(res, 409, { error: 'Ya existe un tour con ese ID' })
+      const existing = await db.collection('tours').findOne({ id: body.id })
+      if (existing) {
+        return json(res, 409, { error: 'Ya existe un tour con ese ID' })
+      }
 
+      // Guardar TODOS los campos del tour (preservar estructura completa)
       const tour = {
-        id, name, price: price || 'Consultar',
-        image: image || '/placeholder.jpg',
-        category: category || 'Adventure',
-        duration: duration || '1 día',
-        groupSize: groupSize || '2-15',
-        description: description || '',
-        itinerary: itinerary || [],
-        included: included || [],
-        notIncluded: notIncluded || [],
-        recommendations: recommendations || [],
-        images: images || [],
-        videos: videos || [],
-        documents: documents || [],
-        boardingPoints: boardingPoints || [],
-        hasAccommodation: hasAccommodation || false,
-        accommodationDetails: accommodationDetails || '',
-        prices: prices || [],
-        seasonName: seasonName || null,
+        ...body,  // Guardar todos los campos que vengan
         createdAt: new Date(),
         updatedAt: new Date(),
       }
+      
+      // Eliminar _id si viene (MongoDB lo genera automáticamente)
+      delete tour._id
       const result = await db.collection('tours').insertOne(tour)
       return json(res, 200, { ok: true, id: result.insertedId, tour })
     }
@@ -267,27 +256,13 @@ export default async function handler(req, res) {
       }
 
       const updates = {
-        ...(body.name && { name: body.name }),
-        ...(body.price !== undefined && { price: body.price }),
-        ...(body.image && { image: body.image }),
-        ...(body.category && { category: body.category }),
-        ...(body.duration && { duration: body.duration }),
-        ...(body.groupSize && { groupSize: body.groupSize }),
-        ...(body.description !== undefined && { description: body.description }),
-        ...(body.itinerary && { itinerary: body.itinerary }),
-        ...(body.included && { included: body.included }),
-        ...(body.notIncluded && { notIncluded: body.notIncluded }),
-        ...(body.recommendations && { recommendations: body.recommendations }),
-        ...(body.images && { images: body.images }),
-        ...(body.videos && { videos: body.videos }),
-        ...(body.documents && { documents: body.documents }),
-        ...(body.boardingPoints && { boardingPoints: body.boardingPoints }),
-        ...(body.hasAccommodation !== undefined && { hasAccommodation: body.hasAccommodation }),
-        ...(body.accommodationDetails !== undefined && { accommodationDetails: body.accommodationDetails }),
-        ...(body.prices && { prices: body.prices }),
-        ...(body.seasonName !== undefined && { seasonName: body.seasonName }),
+        ...body,  // Spread todos los campos del body
         updatedAt: new Date(),
       }
+      
+      // Eliminar campos que no deben actualizarse
+      delete updates._id
+      delete updates.createdAt
       
       const result = await db.collection('tours').updateOne(filter, { $set: updates })
       if (result.matchedCount === 0) return json(res, 404, { error: 'Tour no encontrado' })
