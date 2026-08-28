@@ -71,6 +71,13 @@ export default function Testimonials() {
   const fetchTestimonials = async () => {
     try {
       const res = await fetch('/api/testimonials')
+      
+      if (!res.ok) {
+        const text = await res.text()
+        console.error(`❌ API /api/testimonials returned ${res.status}:`, text)
+        throw new Error(`API error ${res.status}`)
+      }
+      
       const data = await res.json()
       
       if (data.ok && data.testimonials.length > 0) {

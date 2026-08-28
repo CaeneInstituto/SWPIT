@@ -41,6 +41,13 @@ export default function Destinations() {
     async function loadTours() {
       try {
         const res = await fetch(`${API_URL}/api/tours`)
+        
+        if (!res.ok) {
+          const text = await res.text()
+          console.error(`❌ API /api/tours returned ${res.status}:`, text)
+          throw new Error(`API error ${res.status}`)
+        }
+        
         const data = await res.json()
         
         if (data.ok && data.tours && data.tours.length > 0) {

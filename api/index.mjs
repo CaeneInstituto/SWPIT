@@ -298,9 +298,18 @@ export default async function handler(req, res) {
 
     // ── GET /api/testimonials ─────────────────────────────────────────────────
     if (req.method === 'GET' && url === '/api/testimonials') {
-      const db = await getDb()
-      const testimonials = await db.collection('testimonials').find({}).sort({ createdAt: -1 }).toArray()
-      return json(res, 200, { ok: true, testimonials })
+      try {
+        const db = await getDb()
+        const testimonials = await db.collection('testimonials').find({}).sort({ createdAt: -1 }).toArray()
+        return json(res, 200, { ok: true, testimonials })
+      } catch (error) {
+        console.error('❌ Error en /api/testimonials:', error)
+        return json(res, 500, { 
+          ok: false, 
+          error: 'Error al cargar testimonios desde MongoDB',
+          details: error.message 
+        })
+      }
     }
 
     // ── POST /api/testimonials ────────────────────────────────────────────────
@@ -343,9 +352,18 @@ export default async function handler(req, res) {
 
     // ── GET /api/tours ────────────────────────────────────────────────────────
     if (req.method === 'GET' && url === '/api/tours') {
-      const db = await getDb()
-      const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
-      return json(res, 200, { ok: true, tours })
+      try {
+        const db = await getDb()
+        const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
+        return json(res, 200, { ok: true, tours })
+      } catch (error) {
+        console.error('❌ Error en /api/tours:', error)
+        return json(res, 500, { 
+          ok: false, 
+          error: 'Error al cargar tours desde MongoDB',
+          details: error.message 
+        })
+      }
     }
 
     // ── GET /api/tours/:id ────────────────────────────────────────────────────

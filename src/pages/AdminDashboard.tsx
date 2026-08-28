@@ -16,6 +16,13 @@ const API_URL = (import.meta as any).env?.VITE_API_URL || ''
 async function fetchTours(): Promise<Tour[]> {
   try {
     const res = await fetch(`${API_URL}/api/tours`)
+    
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`❌ API /api/tours returned ${res.status}:`, text)
+      return []
+    }
+    
     const data = await res.json()
     if (data.ok && data.tours) {
       return data.tours.map((t: any) => ({
@@ -43,6 +50,13 @@ async function saveTourToAPI(tour: Tour): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tour)
     })
+    
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`❌ API ${method} ${url} returned ${res.status}:`, text)
+      return false
+    }
+    
     const data = await res.json()
     return data.ok
   } catch (error) {
@@ -54,6 +68,13 @@ async function saveTourToAPI(tour: Tour): Promise<boolean> {
 async function deleteTourFromAPI(tourId: string): Promise<boolean> {
   try {
     const res = await fetch(`${API_URL}/api/tours/${tourId}`, { method: 'DELETE' })
+    
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`❌ API DELETE /api/tours/${tourId} returned ${res.status}:`, text)
+      return false
+    }
+    
     const data = await res.json()
     return data.ok
   } catch (error) {
