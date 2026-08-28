@@ -4,6 +4,9 @@ import { tours } from '../data/tours'
 import AddToCartButton from './AddToCartButton'
 import React from 'react'
 
+// API URL
+const API_URL = (import.meta as any).env?.VITE_API_URL || ''
+
 const tagColors: Record<string, string> = {
   'Más popular': 'bg-brand-yellow text-white',
   Cultural:      'bg-brand-teal text-white',
@@ -28,33 +31,42 @@ export default function Destinations() {
   const [maxPrice, setMaxPrice] = useState(500)
   const [search, setSearch] = useState('')
 
-  // Cargar tours desde localStorage si existen, sino usar los datos por defecto
+  // Cargar tours desde MongoDB API
   const [tourList, setTourList] = useState<typeof tours>([])
+  const [loading, setLoading] = useState(true)
 
   React.useEffect(() => {
     console.log('===== Destinations Component Loading =====')
-    const savedTours = localStorage.getItem('tours')
-    if (savedTours) {
+    
+    async function loadTours() {
       try {
-        const parsed = JSON.parse(savedTours)
-        console.log(`Loaded ${parsed.length} tours from localStorage`)
-        parsed.forEach((t: any) => {
-          console.log(`  Tour: "${t.name}" with ID: "${t.id}" (disabled: ${!!t.disabled})`)
-        })
-        setTourList(parsed)
+        const res = await fetch(`${API_URL}/api/tours`)
+        const data = await res.json()
+        
+        if (data.ok && data.tours && data.tours.length > 0) {
+          console.log(`Loaded ${data.tours.length} tours from MongoDB`)
+          data.tours.forEach((t: any) => {
+            console.log(`  Tour: "${t.name}" with ID: "${t.id}" (disabled: ${!!t.disabled})`)
+          })
+          setTourList(data.tours)
+        } else {
+          console.log('No tours in MongoDB, using original data')
+          console.log(`Original tours count: ${tours.length}`)
+          tours.forEach(t => {
+            console.log(`  Tour: "${t.name}" with ID: "${t.id}"`)
+          })
+          setTourList(tours)
+        }
       } catch (error) {
-        console.error('Error parsing tours from localStorage:', error)
+        console.error('Error loading tours from API:', error)
         console.log('Falling back to original tours data')
         setTourList(tours)
+      } finally {
+        setLoading(false)
       }
-    } else {
-      console.log('No saved tours in localStorage, using original data')
-      console.log(`Original tours count: ${tours.length}`)
-      tours.forEach(t => {
-        console.log(`  Tour: "${t.name}" with ID: "${t.id}"`)
-      })
-      setTourList(tours)
     }
+    
+    loadTours()
     console.log('===== Destinations Component Loaded =====')
   }, [])
 
@@ -113,8 +125,17 @@ export default function Destinations() {
           </p>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-sm p-5 mb-10 flex flex-col gap-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-teal"></div>
+              <p className="text-gray-500">Cargando paquetes...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Filters */}
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-10 flex flex-col gap-4">
           {/* Search */}
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,6 +279,8 @@ export default function Destinations() {
             ))
           )}
         </div>
+        </>
+        )}
       </div>
     </section>
   )

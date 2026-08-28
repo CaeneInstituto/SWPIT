@@ -10,6 +10,58 @@ import {
   MessageSquare, Database, ShoppingCart, Download
 } from 'lucide-react'
 
+// API Helpers
+const API_URL = (import.meta as any).env?.VITE_API_URL || ''
+
+async function fetchTours(): Promise<Tour[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/tours`)
+    const data = await res.json()
+    if (data.ok && data.tours) {
+      return data.tours.map((t: any) => ({
+        ...t,
+        itinerary: (t.itinerary || []).map((day: any) => ({
+          ...day,
+          activities: normalizeActivities(day.activities || [])
+        }))
+      }))
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching tours:', error)
+    return []
+  }
+}
+
+async function saveTourToAPI(tour: Tour): Promise<boolean> {
+  try {
+    const method = tour._id ? 'PUT' : 'POST'
+    const url = tour._id ? `${API_URL}/api/tours/${tour.id}` : `${API_URL}/api/tours`
+    
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tour)
+    })
+    const data = await res.json()
+    return data.ok
+  } catch (error) {
+    console.error('Error saving tour:', error)
+    return false
+  }
+}
+
+async function deleteTourFromAPI(tourId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_URL}/api/tours/${tourId}`, { method: 'DELETE' })
+    const data = await res.json()
+    return data.ok
+  } catch (error) {
+    console.error('Error deleting tour:', error)
+    return false
+  }
+}
+
 interface Testimonial {
   _id?: string
   name: string
@@ -51,23 +103,13 @@ export default function AdminDashboard() {
       return
     }
 
-    // Cargar tours desde localStorage o usar los datos iniciales
-    const savedTours = localStorage.getItem('tours')
-    if (savedTours) {
-      try {
-        const parsedTours = JSON.parse(savedTours)
-        // Asegurar que cada tour tenga el itinerario correctamente formateado
-        const processedTours = parsedTours.map((tour: Tour) => ({
-          ...tour,
-          itinerary: (tour.itinerary || []).map(day => ({
-            ...day,
-            activities: normalizeActivities(day.activities || [])
-          }))
-        }))
-        setTourList(processedTours)
-      } catch (error) {
-        console.error('Error parsing tours from localStorage:', error)
-        // Si hay error, usar datos originales
+    // Cargar tours desde MongoDB API
+    async function loadTours() {
+      const toursFromAPI = await fetchTours()
+      if (toursFromAPI.length > 0) {
+        setTourList(toursFromAPI)
+      } else {
+        // Si no hay tours en BD, usar datos iniciales (fallback)
         const processedOriginalTours = tours.map((tour: Tour) => ({
           ...tour,
           itinerary: (tour.itinerary || []).map(day => ({
@@ -77,20 +119,11 @@ export default function AdminDashboard() {
         }))
         setTourList(processedOriginalTours)
       }
-    } else {
-      // Procesar datos originales al cargar por primera vez
-      const processedOriginalTours = tours.map((tour: Tour) => ({
-        ...tour,
-        itinerary: (tour.itinerary || []).map(day => ({
-          ...day,
-          activities: normalizeActivities(day.activities || [])
-        }))
-      }))
-      setTourList(processedOriginalTours)
     }
+    loadTours()
   }, [isAuthenticated, navigate])
 
-  const saveTours = (newTours: Tour[]) => {
+  const saveTours = async (newTours: Tour[]) => {
     // Normalizar todas las horas a formato 24h antes de guardar
     const normalizedTours = newTours.map(tour => ({
       ...tour,
@@ -101,7 +134,11 @@ export default function AdminDashboard() {
     }))
     
     setTourList(normalizedTours)
-    localStorage.setItem('tours', JSON.stringify(normalizedTours))
+    
+    // Guardar cada tour en MongoDB
+    for (const tour of normalizedTours) {
+      await saveTourToAPI(tour)
+    }
   }
 
   const toggleTourStatus = (tourId: string) => {
@@ -111,10 +148,15 @@ export default function AdminDashboard() {
     saveTours(updatedTours)
   }
 
-  const deleteTour = (tourId: string) => {
+  const deleteTour = async (tourId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este paquete?')) {
-      const updatedTours = tourList.filter(tour => tour.id !== tourId)
-      saveTours(updatedTours)
+      const success = await deleteTourFromAPI(tourId)
+      if (success) {
+        const updatedTours = tourList.filter(tour => tour.id !== tourId)
+        setTourList(updatedTours)
+      } else {
+        alert('Error al eliminar el paquete')
+      }
     }
   }
 
@@ -155,7 +197,8 @@ export default function AdminDashboard() {
     
     // Guardar manteniendo el orden
     setTourList(updatedTours)
-    localStorage.setItem('tours', JSON.stringify(updatedTours))
+    // Guardar cada tour actualizado en MongoDB
+    updatedTours.forEach(tour => saveTourToAPI(tour))
     setActiveSeason(seasonName)
     localStorage.setItem('activeSeason', seasonName)
     localStorage.setItem('activeSeasonDiscount', discount.toString())
@@ -181,7 +224,8 @@ export default function AdminDashboard() {
     
     // Guardar manteniendo el orden
     setTourList(updatedTours)
-    localStorage.setItem('tours', JSON.stringify(updatedTours))
+    // Guardar cada tour actualizado en MongoDB
+    updatedTours.forEach(tour => saveTourToAPI(tour))
     setActiveSeason(null)
     localStorage.removeItem('activeSeason')
     localStorage.removeItem('activeSeasonDiscount')
@@ -404,19 +448,34 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             {activeTab === 'tours' && (
               <button
-                onClick={() => {
-                  if (window.confirm('¿Restablecer todos los paquetes a los datos originales? Esto eliminará todos los cambios guardados.')) {
-                    localStorage.removeItem('tours')
+                onClick={async () => {
+                  if (window.confirm('¿Migrar tours originales a MongoDB? Esto NO elimina los tours existentes, solo agrega los que faltan.')) {
+                    // Cargar tours desde API
+                    const existing = await fetchTours()
+                    const existingIds = existing.map(t => t.id)
+                    
+                    // Filtrar tours originales que no existen en BD
+                    const toursToMigrate = tours.filter(t => !existingIds.includes(t.id))
+                    
+                    if (toursToMigrate.length === 0) {
+                      alert('Todos los tours originales ya están en la base de datos')
+                      return
+                    }
+                    
+                    // Guardar tours faltantes
+                    for (const tour of toursToMigrate) {
+                      await saveTourToAPI(tour)
+                    }
+                    
+                    alert(`✅ ${toursToMigrate.length} tour(s) migrados exitosamente`)
                     window.location.reload()
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
-                title="Restablecer datos originales"
+                className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
+                title="Migrar tours originales a MongoDB"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="hidden sm:inline text-sm">Restablecer</span>
+                <Database className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Migrar originales</span>
               </button>
             )}
             <button

@@ -189,6 +189,170 @@ export default async function handler(req, res) {
       return json(res, 200, { ok: true })
     }
 
+    // ── GET /api/tours ────────────────────────────────────────────────────────
+    if (req.method === 'GET' && url === '/api/tours') {
+      const db = await getDb()
+      const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
+      return json(res, 200, { ok: true, tours })
+    }
+
+    // ── GET /api/tours/:id ────────────────────────────────────────────────────
+    if (req.method === 'GET' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
+      const id = url.split('/').pop()
+      const db = await getDb()
+      // Buscar por ID o por slug
+      let tour = null
+      try {
+        tour = await db.collection('tours').findOne({ _id: new ObjectId(id) })
+      } catch {
+        // Si no es ObjectId válido, buscar por slug
+        tour = await db.collection('tours').findOne({ id })
+      }
+      if (!tour) return json(res, 404, { error: 'Tour no encontrado' })
+      return json(res, 200, { ok: true, tour })
+    }
+
+    // ── POST /api/tours ───────────────────────────────────────────────────────
+    if (req.method === 'POST' && url === '/api/tours') {
+      const body = await readBody(req)
+      const { id, name, price, image, category, duration, groupSize, description,
+        itinerary, included, notIncluded, recommendations, images, videos, documents,
+        boardingPoints, hasAccommodation, accommodationDetails, prices, seasonName } = body
+
+      if (!id || !name) return json(res, 400, { error: 'Faltan campos requeridos: id, name' })
+
+      const db = await getDb()
+      // Verificar que no exista otro tour con el mismo id
+      const existing = await db.collection('tours').findOne({ id })
+      if (existing) return json(res, 409, { error: 'Ya existe un tour con ese ID' })
+
+      const tour = {
+        id, name, price: price || 'Consultar',
+        image: image || '/placeholder.jpg',
+        category: category || 'Adventure',
+        duration: duration || '1 día',
+        groupSize: groupSize || '2-15',
+        description: description || '',
+        itinerary: itinerary || [],
+        included: included || [],
+        notIncluded: notIncluded || [],
+        recommendations: recommendations || [],
+        images: images || [],
+        videos: videos || [],
+        documents: documents || [],
+        boardingPoints: boardingPoints || [],
+        hasAccommodation: hasAccommodation || false,
+        accommodationDetails: accommodationDetails || '',
+        prices: prices || [],
+        seasonName: seasonName || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const result = await db.collection('tours').insertOne(tour)
+      return json(res, 200, { ok: true, id: result.insertedId, tour })
+    }
+
+    // ── PUT /api/tours/:id ────────────────────────────────────────────────────
+    if (req.method === 'PUT' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
+      const tourId = url.split('/').pop()
+      const body = await readBody(req)
+      
+      const db = await getDb()
+      // Buscar por _id de MongoDB o por campo id (slug)
+      let filter = {}
+      try {
+        filter = { _id: new ObjectId(tourId) }
+      } catch {
+        filter = { id: tourId }
+      }
+
+      const updates = {
+        ...(body.name && { name: body.name }),
+        ...(body.price !== undefined && { price: body.price }),
+        ...(body.image && { image: body.image }),
+        ...(body.category && { category: body.category }),
+        ...(body.duration && { duration: body.duration }),
+        ...(body.groupSize && { groupSize: body.groupSize }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.itinerary && { itinerary: body.itinerary }),
+        ...(body.included && { included: body.included }),
+        ...(body.notIncluded && { notIncluded: body.notIncluded }),
+        ...(body.recommendations && { recommendations: body.recommendations }),
+        ...(body.images && { images: body.images }),
+        ...(body.videos && { videos: body.videos }),
+        ...(body.documents && { documents: body.documents }),
+        ...(body.boardingPoints && { boardingPoints: body.boardingPoints }),
+        ...(body.hasAccommodation !== undefined && { hasAccommodation: body.hasAccommodation }),
+        ...(body.accommodationDetails !== undefined && { accommodationDetails: body.accommodationDetails }),
+        ...(body.prices && { prices: body.prices }),
+        ...(body.seasonName !== undefined && { seasonName: body.seasonName }),
+        updatedAt: new Date(),
+      }
+      
+      const result = await db.collection('tours').updateOne(filter, { $set: updates })
+      if (result.matchedCount === 0) return json(res, 404, { error: 'Tour no encontrado' })
+      return json(res, 200, { ok: true })
+    }
+
+    // ── DELETE /api/tours/:id ─────────────────────────────────────────────────
+    if (req.method === 'DELETE' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
+      const tourId = url.split('/').pop()
+      const db = await getDb()
+      
+      // Intentar borrar por _id o por campo id
+      let result
+      try {
+        result = await db.collection('tours').deleteOne({ _id: new ObjectId(tourId) })
+      } catch {
+        result = await db.collection('tours').deleteOne({ id: tourId })
+      }
+      
+      if (result.deletedCount === 0) return json(res, 404, { error: 'Tour no encontrado' })
+      return json(res, 200, { ok: true })
+    }
+
+    // ── POST /api/upload ──────────────────────────────────────────────────────
+    // Endpoint para guardar referencias de archivos (imágenes y documentos)
+    // En Vercel, los archivos se suben al public/ en build time, este endpoint
+    // solo registra las URLs en la base de datos para tracking
+    if (req.method === 'POST' && url === '/api/upload') {
+      const { tourId, fileUrl, fileName, fileType, category } = await readBody(req)
+      
+      if (!tourId || !fileUrl) {
+        return json(res, 400, { error: 'Faltan campos: tourId, fileUrl' })
+      }
+
+      const db = await getDb()
+      const upload = {
+        tourId,
+        fileUrl,
+        fileName: fileName || fileUrl.split('/').pop(),
+        fileType: fileType || 'image',
+        category: category || 'general', // 'general', 'itinerary', 'document', 'video'
+        uploadedAt: new Date(),
+      }
+      
+      const result = await db.collection('uploads').insertOne(upload)
+      return json(res, 200, { ok: true, id: result.insertedId, upload })
+    }
+
+    // ── GET /api/uploads/:tourId ──────────────────────────────────────────────
+    if (req.method === 'GET' && url.startsWith('/api/uploads/')) {
+      const tourId = url.split('/').pop()
+      const db = await getDb()
+      const uploads = await db.collection('uploads').find({ tourId }).sort({ uploadedAt: -1 }).toArray()
+      return json(res, 200, { ok: true, uploads })
+    }
+
+    // ── DELETE /api/upload/:id ────────────────────────────────────────────────
+    if (req.method === 'DELETE' && url.startsWith('/api/upload/')) {
+      const uploadId = url.split('/').pop()
+      const db = await getDb()
+      const result = await db.collection('uploads').deleteOne({ _id: new ObjectId(uploadId) })
+      if (result.deletedCount === 0) return json(res, 404, { error: 'Archivo no encontrado' })
+      return json(res, 200, { ok: true })
+    }
+
     // ── 404 ───────────────────────────────────────────────────────────────────
     return json(res, 404, { error: 'Ruta no encontrada' })
 

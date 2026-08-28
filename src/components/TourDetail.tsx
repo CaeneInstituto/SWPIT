@@ -17,6 +17,7 @@ import AddToCartButton from './AddToCartButton'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WHATSAPP_NUMBER = '51929648380' // WhatsApp de contacto
+const API_URL = (import.meta as any).env?.VITE_API_URL || ''
 
 // ─── Activity icon map ────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ export default function TourDetail() {
   const [date, setDate] = useState('')
   const [name, setName] = useState('')
 
-  // Cargar tour desde localStorage o datos por defecto
+  // Cargar tour desde MongoDB API
   React.useEffect(() => {
     console.log('========== TourDetail useEffect START ==========')
     console.log('Received ID from URL:', id)
@@ -174,59 +175,52 @@ export default function TourDetail() {
       return
     }
     
-    // Buscar inmediatamente sin timeout
-    let foundTour: Tour | null = null
-    
-    // Primero buscar en localStorage (datos modificados desde admin)
-    const savedTours = localStorage.getItem('tours')
-    console.log('LocalStorage "tours" key exists:', !!savedTours)
-    
-    if (savedTours) {
+    // Cargar tour desde API
+    async function loadTour() {
       try {
-        const tourList: Tour[] = JSON.parse(savedTours)
-        console.log(`Found ${tourList.length} tours in localStorage:`)
-        tourList.forEach(t => {
-          console.log(`  - ID: "${t.id}" | Name: "${t.name}" | Disabled: ${!!t.disabled}`)
-        })
+        console.log(`Fetching tour from API: /api/tours/${id}`)
+        const res = await fetch(`${API_URL}/api/tours/${id}`)
+        const data = await res.json()
         
-        foundTour = tourList.find(t => {
-          const match = t.id === id && !t.disabled
-          console.log(`Comparing: "${t.id}" === "${id}" && !${!!t.disabled} = ${match}`)
-          return match
-        }) || null
-        
-        if (foundTour) {
-          console.log('✅ Found tour in localStorage:', foundTour.name)
+        if (data.ok && data.tour) {
+          console.log('✅ Found tour in MongoDB:', data.tour.name)
+          
+          // Verificar si el tour está deshabilitado
+          if (data.tour.disabled) {
+            console.log('⚠️ Tour is disabled, won\'t display')
+            setTour(null)
+          } else {
+            setTour(data.tour)
+          }
         } else {
-          console.log('❌ Tour not found in localStorage (either ID mismatch or disabled)')
+          console.log('❌ Tour not found in MongoDB, trying original data...')
+          // Fallback a datos originales
+          const originalTour = getTourById(id)
+          if (originalTour) {
+            console.log('✅ Found tour in original data:', originalTour.name)
+            setTour(originalTour)
+          } else {
+            console.log('❌ Tour not found in original data either')
+            setTour(null)
+          }
         }
       } catch (error) {
-        console.error('❌ Error parsing tours from localStorage:', error)
-      }
-    } else {
-      console.log('No tours found in localStorage')
-    }
-    
-    // Si no se encuentra en localStorage, buscar en datos originales
-    if (!foundTour) {
-      console.log('Searching in original data using getTourById...')
-      foundTour = getTourById(id) || null
-      if (foundTour) {
-        console.log('✅ Found tour in original data:', foundTour.name)
-      } else {
-        console.log('❌ Tour not found in original data either')
-        console.log('This ID does not exist in the tours database')
+        console.error('❌ Error loading tour from API:', error)
+        // Fallback a datos originales en caso de error
+        const originalTour = getTourById(id)
+        if (originalTour) {
+          console.log('✅ Fallback: Found tour in original data:', originalTour.name)
+          setTour(originalTour)
+        } else {
+          setTour(null)
+        }
+      } finally {
+        setLoading(false)
       }
     }
     
-    console.log('Final result - Tour found:', !!foundTour)
-    if (foundTour) {
-      console.log('Will display tour:', foundTour.name)
-    }
+    loadTour()
     console.log('========== TourDetail useEffect END ==========')
-    
-    setTour(foundTour)
-    setLoading(false)
   }, [id])
 
   if (loading) {
