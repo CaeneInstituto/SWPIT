@@ -26,6 +26,7 @@ export interface BoardingPoint {
 }
 
 export interface Tour {
+  _id?: string             // ID de MongoDB (opcional, solo cuando viene de la BD)
   id: string
   name: string
   region: string

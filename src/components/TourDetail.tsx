@@ -195,7 +195,7 @@ export default function TourDetail() {
         } else {
           console.log('❌ Tour not found in MongoDB, trying original data...')
           // Fallback a datos originales
-          const originalTour = getTourById(id)
+          const originalTour = id ? getTourById(id) : null
           if (originalTour) {
             console.log('✅ Found tour in original data:', originalTour.name)
             setTour(originalTour)
@@ -207,7 +207,7 @@ export default function TourDetail() {
       } catch (error) {
         console.error('❌ Error loading tour from API:', error)
         // Fallback a datos originales en caso de error
-        const originalTour = getTourById(id)
+        const originalTour = id ? getTourById(id) : null
         if (originalTour) {
           console.log('✅ Fallback: Found tour in original data:', originalTour.name)
           setTour(originalTour)
