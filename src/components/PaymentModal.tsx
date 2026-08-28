@@ -263,8 +263,7 @@ export default function PaymentModal({ onClose }: Props) {
                   onSuccess={(data) => {
                     setCardPaymentData(data)
                     setStep('confirm')
-                    clearCart()
-                    setCartOpen(false)
+                    // NO limpiar el carrito aquí, se limpia al cerrar el modal de éxito
                   }}
                 />
               )}
