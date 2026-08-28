@@ -269,7 +269,7 @@ export default function TourDetail() {
       {/* Hero banner — imagen estática */}
       <div
         className="relative h-64 md:h-80 w-full"
-        style={{ backgroundImage: `url(${tour.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${tour.image || '/placeholder.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/60 to-brand-dark/80" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex flex-col justify-end pb-8">
