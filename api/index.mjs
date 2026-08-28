@@ -118,7 +118,7 @@ export default async function handler(req, res) {
         const processedItems = []
         
         for (const item of items) {
-          const { tourId, priceOption, quantity, personsPerPackage } = item
+          const { tourId, priceOption, quantity, personsPerPackage, travelDate } = item
           
           if (!tourId || !priceOption || !quantity) {
             return json(res, 400, { error: `Item inválido: falta tourId, priceOption o quantity` })
@@ -165,6 +165,7 @@ export default async function handler(req, res) {
             realPrice,
             quantity,
             personsPerPackage: personsPerPackage || 1,
+            travelDate: travelDate || '', // ✅ Incluir fecha de viaje
             subtotal
           })
         }
@@ -215,17 +216,38 @@ export default async function handler(req, res) {
         // ════════════════════════════════════════════════════════════════════════
         // REGISTRAR COMPRA EN MONGODB (UNA SOLA VEZ)
         // ════════════════════════════════════════════════════════════════════════
+        
+        // Calcular total de personas
+        const totalPersonas = processedItems.reduce((sum, item) => {
+          return sum + (item.quantity * (item.personsPerPackage || 1))
+        }, 0)
+        
+        // Extraer fechas de viaje de los items
+        const fechasViaje = items
+          .filter(item => item.travelDate)
+          .map(item => item.travelDate)
+        const fechaViaje = fechasViaje.length > 0 ? fechasViaje[0] : ''
+        
         const compra = {
           chargeId: charge.id,
           orderId: orderId || `order-${Date.now()}`,
           amount: totalAmount,
           currency: 'PEN',
-          status: charge.outcome?.type || 'venta',
+          status: 'venta', // ✅ Siempre "venta" si el cargo fue exitoso
+          paymentStatus: 'Pagado', // ✅ Agregado para compatibilidad
           email,
           buyerName: buyerName || '',
+          name: buyerName || '', // Alias para compatibilidad
           description: description || 'Reserva Peru In Travel',
+          tours: processedItems.map(i => i.tourName).join('; '), // ✅ Lista de tours
+          totalPersons: totalPersonas, // ✅ Total de personas
+          travelDate: fechaViaje, // ✅ Fecha de viaje
           items: processedItems,
-          metadata: metadata || {},
+          metadata: {
+            ...metadata,
+            totalPersonas, // ✅ También en metadata
+            fechaViaje     // ✅ También en metadata
+          },
           createdAt: new Date(),
           culqiData: {
             token, // Guardar token para prevenir reutilización
@@ -234,7 +256,8 @@ export default async function handler(req, res) {
             country: charge.source?.issuer?.country,
             cardType: charge.source?.card_type
           },
-          paymentMethod: 'Tarjeta de crédito/débito - Culqi'
+          paymentMethod: 'Tarjeta de crédito/débito - Culqi',
+          method: 'Tarjeta' // ✅ Alias para compatibilidad
         }
         
         await db.collection('compras').insertOne(compra)
