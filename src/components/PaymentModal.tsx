@@ -91,6 +91,15 @@ export default function PaymentModal({ onClose }: Props) {
     card:     'Tarjeta de crédito/débito',
   }
 
+  // Validar campos obligatorios
+  const isFormValid = () => {
+    if (!name.trim()) return false
+    if (!dni.trim()) return false
+    if (!phone.trim()) return false
+    if (boardingPoints.length > 0 && !embarque) return false
+    return true
+  }
+
   const handleConfirm = async () => {
     // Calcular monto según método (Yape y Plin 50%, demás 100%)
     const isPartialPayment = method === 'yape' || method === 'plin'
@@ -474,35 +483,67 @@ export default function PaymentModal({ onClose }: Props) {
                       ¡Casi listo! Envíanos el comprobante por WhatsApp para confirmar tu reserva.
                     </p>
                   </div>
+                  
+                  {/* Alerta de campos obligatorios */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
+                    <p className="font-semibold mb-1">📋 Datos requeridos para confirmar:</p>
+                    <ul className="text-xs space-y-0.5 ml-4 list-disc">
+                      <li>Nombre completo</li>
+                      <li>DNI</li>
+                      <li>Teléfono / WhatsApp</li>
+                      {boardingPoints.length > 0 && <li>Punto de embarque</li>}
+                    </ul>
+                  </div>
+
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Tu nombre completo *</label>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
+                        Tu nombre completo <span className="text-red-500">*</span>
+                      </label>
                       <input type="text" placeholder="Ej: Juan Pérez" value={name} onChange={e => setName(e.target.value)} required
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">DNI *</label>
-                      <input type="text" placeholder="Ej: 12345678" value={dni} onChange={e => setDni(e.target.value)} required
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Teléfono / WhatsApp *</label>
-                      <input type="tel" placeholder="Ej: 929648380" value={phone} onChange={e => setPhone(e.target.value)} required
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
+                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
+                          !name.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                        }`}/>
+                      {!name.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
-                        Punto de embarque {boardingPoints.length > 0 && '*'}
+                        DNI <span className="text-red-500">*</span>
+                      </label>
+                      <input type="text" placeholder="Ej: 12345678" value={dni} onChange={e => setDni(e.target.value)} required
+                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
+                          !dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                        }`}/>
+                      {!dni.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
+                        Teléfono / WhatsApp <span className="text-red-500">*</span>
+                      </label>
+                      <input type="tel" placeholder="Ej: 987654321" value={phone} onChange={e => setPhone(e.target.value)} required
+                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
+                          !phone.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                        }`}/>
+                      {!phone.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
+                        Punto de embarque {boardingPoints.length > 0 && <span className="text-red-500">*</span>}
                       </label>
                       {boardingPoints.length > 0 ? (
-                        <select value={embarque} onChange={e => setEmbarque(e.target.value)} required
-                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal">
-                          <option value="">Selecciona un punto de embarque</option>
-                          {boardingPoints.map((point, index) => (
-                            <option key={index} value={point.name}>{point.name} - {point.time}</option>
-                          ))}
-                          <option value="Otro">Otro (especificar en comentario)</option>
-                        </select>
+                        <>
+                          <select value={embarque} onChange={e => setEmbarque(e.target.value)} required
+                            className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
+                              !embarque ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                            }`}>
+                            <option value="">Selecciona un punto de embarque</option>
+                            {boardingPoints.map((point, index) => (
+                              <option key={index} value={point.name}>{point.name} - {point.time}</option>
+                            ))}
+                            <option value="Otro">Otro (especificar en comentario)</option>
+                          </select>
+                          {!embarque && <p className="text-xs text-red-500 mt-1">Debes seleccionar un punto de embarque</p>}
+                        </>
                       ) : (
                         <input type="text" placeholder="Ej: Plaza San Martín, Lima" value={embarque} onChange={e => setEmbarque(e.target.value)}
                           className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
@@ -572,12 +613,19 @@ export default function PaymentModal({ onClose }: Props) {
                     <button onClick={() => setStep('instructions')} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
                       ← Volver
                     </button>
-                    <button onClick={handleConfirm}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <button 
+                      onClick={handleConfirm}
+                      disabled={!isFormValid()}
+                      className={`flex-1 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${
+                        isFormValid() 
+                          ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                       </svg>
-                      Confirmar por WhatsApp
+                      {isFormValid() ? 'Confirmar por WhatsApp' : 'Completa los campos obligatorios'}
                     </button>
                   </div>
                   <p className="text-center text-xs text-gray-400">
