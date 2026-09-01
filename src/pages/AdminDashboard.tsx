@@ -1051,7 +1051,7 @@ export default function AdminDashboard() {
                         </div>
                         
                         {/* Fila expandible con más detalles */}
-                        {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario ? (
+                        {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario || purchase.metadata?.notaVoucher ? (
                           <div id={`details-${purchase._id}`} style={{ display: 'none' }} className="mt-4 pt-4 border-t border-gray-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-gray-50 rounded-lg p-4">
                               {purchase.metadata?.pasajeros && (
@@ -1084,6 +1084,16 @@ export default function AdminDashboard() {
                                   </div>
                                   <div className="text-gray-600 italic bg-white rounded px-3 py-2">
                                     "{purchase.metadata.comentario}"
+                                  </div>
+                                </div>
+                              )}
+                              {purchase.metadata?.notaVoucher && (
+                                <div>
+                                  <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                    📎 Nota del Voucher
+                                  </div>
+                                  <div className="text-gray-600 bg-white rounded px-3 py-2 font-mono text-xs">
+                                    {purchase.metadata.notaVoucher}
                                   </div>
                                 </div>
                               )}
