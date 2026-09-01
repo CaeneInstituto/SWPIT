@@ -334,9 +334,12 @@ export default function AdminDashboard() {
       // Preparar datos para Excel
       const excelData = purchases.map((purchase, index) => {
         const pasajeros = purchase.metadata?.pasajeros || []
-        const pasajerosTexto = pasajeros.map((p: any) => 
-          `${p.nombre || '-'} (DNI: ${p.dni || '-'}, Edad: ${p.edad || '-'})`
-        ).join('; ')
+        // Validar si pasajeros es array o string
+        const pasajerosTexto = Array.isArray(pasajeros) 
+          ? pasajeros.map((p: any) => 
+              `${p.nombre || '-'} (DNI: ${p.dni || '-'}, Edad: ${p.edad || '-'})`
+            ).join('; ')
+          : (typeof pasajeros === 'string' ? pasajeros : 'N/A')
         
         return {
           'N°': index + 1,
@@ -355,6 +358,7 @@ export default function AdminDashboard() {
           'Punto de Embarque': purchase.metadata?.puntoEmbarque || 'N/A',
           'Habitación': purchase.metadata?.habitacion || 'N/A',
           'Comentario': purchase.metadata?.comentario || '',
+          'Nota Voucher': purchase.metadata?.notaVoucher || '',
           'Cantidad Items': purchase.items ? purchase.items.length : 0
         }
       })
@@ -381,6 +385,7 @@ export default function AdminDashboard() {
         { wch: 30 }, // Punto Embarque
         { wch: 25 }, // Habitación
         { wch: 40 }, // Comentario
+        { wch: 30 }, // Nota Voucher
         { wch: 10 }  // Cantidad Items
       ]
       ws['!cols'] = colWidths
