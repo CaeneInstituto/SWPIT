@@ -7,7 +7,6 @@ const links = [
   { label: 'Destinos',      href: '/#destinos',  isRoute: false },
   { label: 'Quiénes somos', href: '/quienes-somos', isRoute: true },
   { label: 'Testimonios',   href: '/#testimonios', isRoute: false },
-  { label: 'Contáctanos',   href: '/contactanos',  isRoute: true },
 ]
 
 export default function Navbar() {

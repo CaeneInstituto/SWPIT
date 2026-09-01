@@ -86,15 +86,15 @@ export default function PaymentModal({ onClose }: Props) {
 
   const methodLabels: Record<PaymentMethod, string> = {
     yape:     'Yape (50% adelanto por WhatsApp)',
-    plin:     'Plin',
+    plin:     'Plin (50% adelanto por WhatsApp)',
     transfer: 'Transferencia bancaria',
     card:     'Tarjeta de crédito/débito',
   }
 
   const handleConfirm = async () => {
-    // Calcular monto según método (Yape 50%, demás 100%)
-    const isYape = method === 'yape'
-    const amountToPay = isYape ? totalPrice * 0.5 : totalPrice
+    // Calcular monto según método (Yape y Plin 50%, demás 100%)
+    const isPartialPayment = method === 'yape' || method === 'plin'
+    const amountToPay = isPartialPayment ? totalPrice * 0.5 : totalPrice
     
     // Preparar datos para guardar
     const purchaseData = {
@@ -145,7 +145,7 @@ export default function PaymentModal({ onClose }: Props) {
       message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
     message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n`
-    message += `💵 *Monto a pagar: S/ ${amountToPay.toFixed(2)}*${isYape ? ' (50% adelanto)' : ''}\n`
+    message += `💵 *Monto a pagar: S/ ${amountToPay.toFixed(2)}*${isPartialPayment ? ' (50% adelanto)' : ''}\n`
     if (embarque) message += `📍 *Punto de embarque:* ${embarque}\n`
     if (voucherNote) message += `📎 *Nota:* ${voucherNote}\n`
     if (comentario) message += `💬 *Comentario:* ${comentario}\n`
@@ -193,7 +193,7 @@ export default function PaymentModal({ onClose }: Props) {
           {step === 'method' && (
             <div className="space-y-3">
               <p className="text-gray-600 text-sm mb-4">Selecciona cómo realizarás el pago:</p>
-              {(['yape', 'plin', 'card', 'transfer'] as PaymentMethod[]).map((m) => (
+              {(['yape', 'plin', 'card'] as PaymentMethod[]).map((m) => (
                 <button key={m} onClick={() => setMethod(m)}
                   className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                     method === m ? 'border-brand-teal bg-teal-50' : 'border-gray-200 hover:border-gray-300'
@@ -208,9 +208,8 @@ export default function PaymentModal({ onClose }: Props) {
                     <p className="font-semibold text-gray-800">{methodLabels[m]}</p>
                     <p className="text-xs text-gray-500">
                       {m === 'yape' ? 'Pago rápido desde tu app Yape · Coordinación por WhatsApp (50% adelanto)'
-                      : m === 'plin' ? 'Pago rápido desde tu app Plin (100%)'
-                      : m === 'card' ? 'Visa, Mastercard, Amex · Powered by Culqi (100%)'
-                      : 'Depósito o transferencia bancaria (100%)'}
+                      : m === 'plin' ? 'Pago rápido desde tu app Plin · Coordinación por WhatsApp (50% adelanto)'
+                      : 'Visa, Mastercard, Amex · Powered by Culqi (100%)'}
                     </p>
                   </div>
                   {method === m && (
@@ -257,12 +256,14 @@ export default function PaymentModal({ onClose }: Props) {
                     </div>
                   ) : (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
-                      <p className="font-semibold text-yellow-800">📋 Instrucciones:</p>
+                      <p className="font-semibold text-yellow-800">📋 Instrucciones (Pago 50% adelanto):</p>
                       <ol className="list-decimal list-inside space-y-1 text-yellow-700 mt-2">
                         <li>Abre tu app Plin</li>
                         <li>Ingresa el número <strong>{PAYMENT_INFO.plin.number}</strong></li>
-                        <li>Envía <strong>S/ {totalPrice.toFixed(2)}</strong> (pago completo)</li>
-                        <li>Guarda el comprobante y continúa</li>
+                        <li>Envía <strong>S/ {(totalPrice * 0.5).toFixed(2)}</strong> (50% del total)</li>
+                        <li>Guarda el comprobante</li>
+                        <li>Completa el formulario y envía por WhatsApp</li>
+                        <li>El 50% restante se paga antes del viaje</li>
                       </ol>
                     </div>
                   )}
