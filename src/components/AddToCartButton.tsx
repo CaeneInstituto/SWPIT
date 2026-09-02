@@ -582,20 +582,25 @@ function DynamicCartModal({
                               
                               const personsNeeded = detectPersonsPerPackage(option.label)
                               
+                              // Si es paquete mixto (personsNeeded === -1), no aplicar restricciones de habitación
+                              const isMixedPackage = personsNeeded === -1
+                              
                               // Calcular si estamos en una posición válida para esta habitación
                               let canSelectRoom = true
-                              if (isTriple) {
-                                const groupStart = Math.floor(index / 3) * 3
-                                canSelectRoom = (groupStart + 3 <= totalPersons)
-                              } else if (isCuadruple) {
-                                const groupStart = Math.floor(index / 4) * 4
-                                canSelectRoom = (groupStart + 4 <= totalPersons)
-                              } else if (isQuintuple) {
-                                const groupStart = Math.floor(index / 5) * 5
-                                canSelectRoom = (groupStart + 5 <= totalPersons)
-                              } else if (isDoble) {
-                                const groupStart = Math.floor(index / 2) * 2
-                                canSelectRoom = (groupStart + 2 <= totalPersons)
+                              if (!isMixedPackage) {
+                                if (isTriple) {
+                                  const groupStart = Math.floor(index / 3) * 3
+                                  canSelectRoom = (groupStart + 3 <= totalPersons)
+                                } else if (isCuadruple) {
+                                  const groupStart = Math.floor(index / 4) * 4
+                                  canSelectRoom = (groupStart + 4 <= totalPersons)
+                                } else if (isQuintuple) {
+                                  const groupStart = Math.floor(index / 5) * 5
+                                  canSelectRoom = (groupStart + 5 <= totalPersons)
+                                } else if (isDoble) {
+                                  const groupStart = Math.floor(index / 2) * 2
+                                  canSelectRoom = (groupStart + 2 <= totalPersons)
+                                }
                               }
                               
                               // Lógica de disponibilidad
@@ -611,8 +616,8 @@ function DynamicCartModal({
                                 canSelect = false
                               }
                               
-                              // Para habitaciones fijas
-                              if ((isTriple || isCuadruple || isQuintuple || isDoble) && !canSelectRoom) {
+                              // Para habitaciones fijas (NO aplicar a paquetes mixtos)
+                              if (!isMixedPackage && (isTriple || isCuadruple || isQuintuple || isDoble) && !canSelectRoom) {
                                 canSelect = false
                               }
                               
@@ -767,20 +772,25 @@ function DynamicCartModal({
                             const personsNeeded = detectPersonsPerPackage(option.label)
                             const remainingPersons = totalPersons - index
                             
+                            // Si es paquete mixto (personsNeeded === -1), no aplicar restricciones de habitación
+                            const isMixedPackage = personsNeeded === -1
+                            
                             // Calcular si estamos en una posición válida para esta habitación
                             let canSelectRoom = true
-                            if (isTriple) {
-                              const groupStart = Math.floor(index / 3) * 3
-                              canSelectRoom = (groupStart + 3 <= totalPersons)
-                            } else if (isCuadruple) {
-                              const groupStart = Math.floor(index / 4) * 4
-                              canSelectRoom = (groupStart + 4 <= totalPersons)
-                            } else if (isQuintuple) {
-                              const groupStart = Math.floor(index / 5) * 5
-                              canSelectRoom = (groupStart + 5 <= totalPersons)
-                            } else if (isDoble) {
-                              const groupStart = Math.floor(index / 2) * 2
-                              canSelectRoom = (groupStart + 2 <= totalPersons)
+                            if (!isMixedPackage) {
+                              if (isTriple) {
+                                const groupStart = Math.floor(index / 3) * 3
+                                canSelectRoom = (groupStart + 3 <= totalPersons)
+                              } else if (isCuadruple) {
+                                const groupStart = Math.floor(index / 4) * 4
+                                canSelectRoom = (groupStart + 4 <= totalPersons)
+                              } else if (isQuintuple) {
+                                const groupStart = Math.floor(index / 5) * 5
+                                canSelectRoom = (groupStart + 5 <= totalPersons)
+                              } else if (isDoble) {
+                                const groupStart = Math.floor(index / 2) * 2
+                                canSelectRoom = (groupStart + 2 <= totalPersons)
+                              }
                             }
                             
                             // Lógica de disponibilidad
@@ -796,8 +806,8 @@ function DynamicCartModal({
                               canSelect = false
                             }
                             
-                            // Para habitaciones fijas
-                            if ((isTriple || isCuadruple || isQuintuple || isDoble) && !canSelectRoom) {
+                            // Para habitaciones fijas (NO aplicar a paquetes mixtos)
+                            if (!isMixedPackage && (isTriple || isCuadruple || isQuintuple || isDoble) && !canSelectRoom) {
                               canSelect = false
                             }
                             
