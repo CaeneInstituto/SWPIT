@@ -53,6 +53,8 @@ export default function PaymentModal({ onClose }: Props) {
   const [yapePhone, setYapePhone] = useState('')
   const [yapeCode, setYapeCode] = useState('')
   const [yapeValidated, setYapeValidated] = useState(false)
+  const [yapeScreenshot, setYapeScreenshot] = useState<File | null>(null)
+  const [yapeScreenshotPreview, setYapeScreenshotPreview] = useState<string>('')
 
   // Función para validar el pago de Yape
   const validateYapePayment = () => {
@@ -69,20 +71,42 @@ export default function PaymentModal({ onClose }: Props) {
       return false
     }
     
-    if (!yapeCode.trim()) {
-      alert('Por favor ingresa el código de aprobación de tu Yape')
+    if (!yapeScreenshot) {
+      alert('Por favor sube la captura de pantalla de tu comprobante Yape')
       return false
     }
     
-    if (yapeCode.length < 4) {
-      alert('El código de aprobación debe tener al menos 4 caracteres')
+    // Validar que sea una imagen
+    if (!yapeScreenshot.type.startsWith('image/')) {
+      alert('Por favor sube un archivo de imagen válido')
       return false
     }
     
-    // Simular validación (en producción aquí se haría una llamada a API)
+    // Validar tamaño (máximo 5MB)
+    if (yapeScreenshot.size > 5 * 1024 * 1024) {
+      alert('La imagen es demasiado grande. Por favor sube una imagen menor a 5MB')
+      return false
+    }
+    
+    // Validación exitosa
     setYapeValidated(true)
     setStep('instructions')
     return true
+  }
+  
+  // Función para manejar la carga de la captura
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setYapeScreenshot(file)
+      
+      // Crear preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setYapeScreenshotPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   // Datos del pago exitoso con tarjeta
@@ -160,6 +184,21 @@ export default function PaymentModal({ onClose }: Props) {
     const isPartialPayment = method === 'yape' || method === 'plin'
     const amountToPay = isPartialPayment ? totalPrice * 0.5 : totalPrice
     
+    // Convertir captura de Yape a base64 si existe
+    let yapeScreenshotBase64 = ''
+    if (method === 'yape' && yapeScreenshot) {
+      try {
+        const reader = new FileReader()
+        yapeScreenshotBase64 = await new Promise((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(yapeScreenshot)
+        })
+      } catch (error) {
+        console.error('Error convirtiendo imagen:', error)
+      }
+    }
+    
     // Preparar datos para guardar
     const purchaseData = {
       name: name || 'Sin especificar',
@@ -184,7 +223,7 @@ export default function PaymentModal({ onClose }: Props) {
       passengers: passengers.filter(p => p.nombre || p.dni || p.edad), // Solo pasajeros con datos
       // Datos de validación de Yape
       yapePhone: method === 'yape' && yapeValidated ? yapePhone : '',
-      yapeCode: method === 'yape' && yapeValidated ? yapeCode : ''
+      yapeScreenshot: method === 'yape' && yapeValidated ? yapeScreenshotBase64 : ''
     }
 
     // Guardar en BD solo para métodos manuales (NO para tarjeta, eso lo hace /api/charge)
@@ -211,7 +250,7 @@ export default function PaymentModal({ onClose }: Props) {
     if (method === 'yape' && yapeValidated) {
       message += `\n📲 *Datos de Yape:*\n`
       message += `   • Celular Yape: ${yapePhone}\n`
-      message += `   • Código de aprobación: ${yapeCode}\n`
+      message += `   • Comprobante: Captura adjunta ✓\n`
       message += `   • Monto yapeado: S/ ${(totalPrice * 0.5).toFixed(2)}\n`
     }
     
@@ -366,29 +405,53 @@ export default function PaymentModal({ onClose }: Props) {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Ingresa el código de aprobación
+                    Sube la captura de tu comprobante Yape *
                   </label>
-                  <input
-                    type="text"
-                    value={yapeCode}
-                    onChange={(e) => setYapeCode(e.target.value.toUpperCase())}
-                    placeholder="Ej: ABC123"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-[#6C1DDB] focus:border-transparent"
-                  />
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#6C1DDB] transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotUpload}
+                      className="hidden"
+                      id="yape-screenshot"
+                    />
+                    <label htmlFor="yape-screenshot" className="cursor-pointer">
+                      {yapeScreenshotPreview ? (
+                        <div className="space-y-2">
+                          <img 
+                            src={yapeScreenshotPreview} 
+                            alt="Preview" 
+                            className="max-h-40 mx-auto rounded-lg shadow-md"
+                          />
+                          <p className="text-green-600 font-semibold text-sm">✓ Captura cargada</p>
+                          <p className="text-xs text-gray-500">Click para cambiar</p>
+                        </div>
+                      ) : (
+                        <div className="py-8">
+                          <svg className="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="font-semibold text-gray-700">Click para subir captura</p>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG o JPEG (máx. 5MB)</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Encuéntralo en tu Yape, opción "Aprobar compras"
+                    Toma captura de pantalla de tu comprobante Yape mostrando el monto y destino
                   </p>
                 </div>
               </div>
 
               {/* Instrucciones visuales */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="font-semibold text-blue-800 mb-2">💡 ¿Cómo encontrar el código?</p>
+                <p className="font-semibold text-blue-800 mb-2">📸 ¿Cómo tomar la captura?</p>
                 <ol className="list-decimal list-inside text-blue-700 text-sm space-y-1">
-                  <li>Abre tu app Yape</li>
-                  <li>Ve a "Aprobar compras"</li>
-                  <li>Busca la transacción de <strong>S/ {(totalPrice * 0.5).toFixed(2)}</strong></li>
-                  <li>Copia el código de 6 dígitos que aparece</li>
+                  <li>Realiza el Yape de <strong>S/ {(totalPrice * 0.5).toFixed(2)}</strong> al número indicado</li>
+                  <li>Una vez confirmado, abre tu historial de Yape</li>
+                  <li>Busca la transacción que acabas de realizar</li>
+                  <li>Toma captura de pantalla que muestre: monto, fecha y número de destino</li>
+                  <li>Súbela en el campo de arriba</li>
                 </ol>
               </div>
 
@@ -493,6 +556,8 @@ export default function PaymentModal({ onClose }: Props) {
                     setYapeValidated(false)
                     setYapePhone('')
                     setYapeCode('')
+                    setYapeScreenshot(null)
+                    setYapeScreenshotPreview('')
                   }} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
                     ← Volver
                   </button>
