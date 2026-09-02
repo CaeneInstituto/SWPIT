@@ -292,7 +292,8 @@ export default async function handler(req, res) {
       const body = await readBody(req)
       const { name, email, phone, dni, method, tours, totalPersons,
         travelDate, totalPrice, reserveAmount, paymentStatus,
-        note, culqiId, embarque, habitacion, comentario, passengers } = body
+        note, culqiId, embarque, habitacion, comentario, passengers,
+        yapePhone, yapeScreenshot } = body
 
       const db = await getDb()
       const compra = {
@@ -311,6 +312,9 @@ export default async function handler(req, res) {
           tipoCompra: 'Manual', puntoEmbarque: embarque || '',
           habitacion: habitacion || '', comentario: comentario || '',
           pasajeros: passengers || [],
+          // Datos de validación de Yape
+          yapePhone: yapePhone || '',
+          yapeScreenshot: yapeScreenshot || ''
         },
         createdAt: new Date(),
         paymentMethod: method,
