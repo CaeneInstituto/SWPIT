@@ -98,12 +98,32 @@ export default function PaymentModal({ onClose }: Props) {
   const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // Validar tipo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor sube un archivo de imagen válido (PNG, JPG o JPEG)')
+        e.target.value = '' // Reset input
+        return
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen es demasiado grande. Por favor sube una imagen menor a 5MB')
+        e.target.value = '' // Reset input
+        return
+      }
+      
       setYapeScreenshot(file)
       
       // Crear preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setYapeScreenshotPreview(reader.result as string)
+      }
+      reader.onerror = () => {
+        alert('Error al cargar la imagen. Por favor intenta de nuevo.')
+        setYapeScreenshot(null)
+        setYapeScreenshotPreview('')
+        e.target.value = '' // Reset input
       }
       reader.readAsDataURL(file)
     }
@@ -415,16 +435,27 @@ export default function PaymentModal({ onClose }: Props) {
                       className="hidden"
                       id="yape-screenshot"
                     />
-                    <label htmlFor="yape-screenshot" className="cursor-pointer">
+                    <label htmlFor="yape-screenshot" className="cursor-pointer block">
                       {yapeScreenshotPreview ? (
                         <div className="space-y-2">
-                          <img 
-                            src={yapeScreenshotPreview} 
-                            alt="Preview" 
-                            className="max-h-40 mx-auto rounded-lg shadow-md"
-                          />
-                          <p className="text-green-600 font-semibold text-sm">✓ Captura cargada</p>
-                          <p className="text-xs text-gray-500">Click para cambiar</p>
+                          <div className="relative bg-gray-100 rounded-lg p-2">
+                            <img 
+                              src={yapeScreenshotPreview} 
+                              alt="Preview comprobante" 
+                              className="max-h-60 w-auto mx-auto rounded-lg shadow-lg object-contain"
+                              onError={(e) => {
+                                console.error('Error cargando preview de imagen')
+                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+'
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-center gap-2">
+                            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                            </svg>
+                            <p className="text-green-600 font-semibold text-sm">Captura cargada</p>
+                          </div>
+                          <p className="text-xs text-gray-500">Click para cambiar la imagen</p>
                         </div>
                       ) : (
                         <div className="py-8">
