@@ -11,19 +11,22 @@ export interface CartItem {
   personsPerPackage: number // Cuántas personas incluye cada paquete
   boardingPoints?: Array<{ name: string; address: string; time: string }> // Puntos de embarque del tour
   hasAccommodation: boolean // Si el paquete incluye alojamiento
+  customTotalPrice?: number // Para precios dinámicos calculados
+  totalPersons?: number // Total de personas en la reserva
 }
 
 // Helper function para detectar cuántas personas incluye un paquete
 export function detectPersonsPerPackage(optionLabel: string): number {
   const label = optionLabel.toLowerCase()
   
-  // Detectar patrones específicos
+  // Detectar patrones específicos de habitaciones (orden importa)
+  if (label.includes('quintuple') || label.includes('quíntuple')) return 5
   if (label.includes('cuádruple') || label.includes('cuadruple')) return 4
   if (label.includes('triple')) return 3
   if (label.includes('doble') || label.includes('matrimonial') || label.includes('parejas') || label.includes('2 personas')) return 2
   if (label.includes('individual') || label.includes('1 persona')) return 1
   
-  // Detectar "a partir de X personas"
+  // Detectar "a partir de X personas" (para tours sin hospedaje)
   const matchApartir = label.match(/a partir de (\d+)/i)
   if (matchApartir) return parseInt(matchApartir[1])
   
@@ -128,7 +131,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  const totalPrice = items.reduce((sum, item) => sum + item.priceValue * item.quantity, 0)
+  const totalPrice = items.reduce((sum, item) => {
+    // Use customTotalPrice if available, otherwise use priceValue * quantity
+    const itemTotal = item.customTotalPrice || (item.priceValue * item.quantity)
+    return sum + itemTotal
+  }, 0)
 
   return (
     <CartContext.Provider

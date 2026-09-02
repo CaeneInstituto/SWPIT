@@ -26,9 +26,10 @@ export default function Cart() {
     items.forEach((item, index) => {
       message += `${index + 1}. *${item.tourName}*\n`
       message += `   Opción: ${item.priceOption}\n`
-      message += `   Personas: ${item.quantity}\n`
+      message += `   Personas: ${item.totalPersons || (item.quantity * item.personsPerPackage)}\n`
       message += `   Fecha: ${item.travelDate}\n`
-      message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
+      const itemTotal = item.customTotalPrice || (item.priceValue * item.quantity)
+      message += `   Subtotal: S/ ${itemTotal.toFixed(2)}\n\n`
     })
     message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n\n`
     message += `¿Podrían confirmar disponibilidad y enviarme más detalles?`
@@ -109,9 +110,11 @@ export default function Cart() {
                     <p className="text-xs text-gray-600 mb-1">{item.priceOption}</p>
                     <p className="text-xs text-gray-500">📅 {item.travelDate}</p>
                     <p className="text-xs text-purple-600 mt-1">
-                      👥 {item.personsPerPackage} {item.personsPerPackage === 1 ? 'persona' : 'personas'} por paquete
+                      👥 {item.totalPersons || (item.personsPerPackage * item.quantity)} {(item.totalPersons || (item.personsPerPackage * item.quantity)) === 1 ? 'persona' : 'personas'} total
                     </p>
-                    <p className="text-brand-teal font-bold mt-2">S/ {item.priceValue.toFixed(2)} × {item.quantity}</p>
+                    <p className="text-brand-teal font-bold mt-2">
+                      S/ {item.customTotalPrice ? item.customTotalPrice.toFixed(2) : (item.priceValue * item.quantity).toFixed(2)}
+                    </p>
                   </div>
                   <button
                     onClick={() => removeItem(item.tourId, item.priceOption)}
@@ -122,29 +125,6 @@ export default function Cart() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                </div>
-
-                {/* Quantity controls */}
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-xs text-gray-600">Paquetes:</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(item.tourId, item.priceOption, item.quantity - 1)}
-                      className="w-7 h-7 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.tourId, item.priceOption, item.quantity + 1)}
-                      className="w-7 h-7 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <span className="text-xs text-gray-500 ml-auto">
-                    = {item.personsPerPackage * item.quantity} {item.personsPerPackage * item.quantity === 1 ? 'persona' : 'personas'}
-                  </span>
                 </div>
               </div>
             ))
