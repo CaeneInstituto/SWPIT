@@ -13,6 +13,172 @@ import {
 // API Helpers
 const API_URL = (import.meta as any).env?.VITE_API_URL || ''
 
+// Package Intelligence Functions
+function analyzePackageType(label: string, price: string) {
+  const labelLower = label.toLowerCase()
+  const priceNum = parseFloat(price.replace(/[^\d.]/g, '')) || 0
+  
+  const analysis = {
+    type: 'unknown',
+    personsIncluded: 1,
+    isFixed: false,
+    isGroup: false,
+    isCouple: false,
+    description: '',
+    examples: [] as string[]
+  }
+  
+  // Detectar patrones específicos
+  if (labelLower.includes('quintuple') || labelLower.includes('quíntuple')) {
+    analysis.type = 'habitacion-fija'
+    analysis.personsIncluded = 5
+    analysis.isFixed = true
+    analysis.description = 'Habitación fija para 5 personas'
+    analysis.examples = [
+      '5 personas → 1 Quintuple (S/ ' + priceNum.toFixed(0) + ')',
+      '6 personas → 1 Quintuple + 1 individual',
+      '10 personas → 2 Quintuples exactos'
+    ]
+  } else if (labelLower.includes('cuádruple') || labelLower.includes('cuadruple')) {
+    analysis.type = 'habitacion-fija'
+    analysis.personsIncluded = 4
+    analysis.isFixed = true
+    analysis.description = 'Habitación fija para 4 personas'
+    analysis.examples = [
+      '4 personas → 1 Cuádruple (S/ ' + priceNum.toFixed(0) + ')',
+      '5 personas → 1 Cuádruple + 1 individual',
+      '8 personas → 2 Cuádruples exactos'
+    ]
+  } else if (labelLower.includes('triple') && !labelLower.includes('a partir de')) {
+    analysis.type = 'habitacion-fija'
+    analysis.personsIncluded = 3
+    analysis.isFixed = true
+    analysis.description = 'Habitación fija para 3 personas'
+    analysis.examples = [
+      '3 personas → 1 Triple (S/ ' + priceNum.toFixed(0) + ')',
+      '4 personas → 1 Triple + 1 individual',
+      '6 personas → 2 Triples exactos'
+    ]
+  } else if ((labelLower.includes('doble') || labelLower.includes('matrimonial')) && !labelLower.includes('pareja')) {
+    analysis.type = 'habitacion-fija'
+    analysis.personsIncluded = 2
+    analysis.isFixed = true
+    analysis.description = 'Habitación fija para 2 personas'
+    analysis.examples = [
+      '2 personas → 1 Doble (S/ ' + priceNum.toFixed(0) + ')',
+      '3 personas → 1 Doble + 1 individual',
+      '4 personas → 2 Dobles exactos'
+    ]
+  } else if (labelLower.includes('pareja') || labelLower.includes('parejas')) {
+    analysis.type = 'promo-pareja'
+    analysis.personsIncluded = 2
+    analysis.isCouple = true
+    analysis.description = 'Promoción de parejas (precio total para 2)'
+    analysis.examples = [
+      '2 personas → S/ ' + priceNum.toFixed(0) + ' total (ambos incluidos)',
+      '4 personas → 2 Promos de pareja = S/ ' + (priceNum * 2).toFixed(0),
+      '6 personas → 3 Promos de pareja = S/ ' + (priceNum * 3).toFixed(0)
+    ]
+  } else if (labelLower.includes('a partir de 3') || labelLower.includes('apartir de 3')) {
+    analysis.type = 'precio-grupal'
+    analysis.personsIncluded = 1
+    analysis.isGroup = true
+    analysis.description = 'Precio por persona cuando hay 3 o más'
+    analysis.examples = [
+      '3 personas → S/ ' + priceNum.toFixed(0) + ' c/u = S/ ' + (priceNum * 3).toFixed(0),
+      '5 personas → S/ ' + priceNum.toFixed(0) + ' c/u = S/ ' + (priceNum * 5).toFixed(0),
+      'Siempre disponible si el tour total ≥ 3 personas'
+    ]
+  } else if (labelLower.includes('individual') || labelLower.includes('1 persona')) {
+    analysis.type = 'individual'
+    analysis.personsIncluded = 1
+    analysis.description = 'Precio individual por persona'
+    analysis.examples = [
+      '1 persona → S/ ' + priceNum.toFixed(0),
+      '2 personas → S/ ' + priceNum.toFixed(0) + ' c/u = S/ ' + (priceNum * 2).toFixed(0),
+      'Recomendado solo para tours de 1-2 personas'
+    ]
+  } else {
+    analysis.description = 'Paquete estándar (revisar configuración)'
+    analysis.examples = [
+      'No se detectó tipo específico',
+      'Verifica el nombre del paquete',
+      'Añade palabras clave: Triple, Cuádruple, etc.'
+    ]
+  }
+  
+  return analysis
+}
+
+// Package Intelligence Display Component
+function PackageIntelligence({ label, price }: { label: string, price: string }) {
+  if (!label || !price) return null
+  
+  const analysis = analyzePackageType(label, price)
+  const color = getTypeColor(analysis.type)
+  const icon = getTypeIcon(analysis.type)
+  
+  const colorClasses = {
+    blue: 'bg-blue-50 border-blue-200 text-blue-800',
+    pink: 'bg-pink-50 border-pink-200 text-pink-800', 
+    green: 'bg-green-50 border-green-200 text-green-800',
+    gray: 'bg-gray-50 border-gray-200 text-gray-800',
+    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800'
+  }
+  
+  return (
+    <div className={`mt-3 p-3 rounded-lg border ${colorClasses[color as keyof typeof colorClasses]}`}>
+      <div className="flex items-start gap-2 mb-2">
+        <span className="text-lg">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">{analysis.description}</p>
+          <p className="text-xs opacity-80 mt-1">
+            {analysis.isFixed && `Agrupa ${analysis.personsIncluded} personas automáticamente`}
+            {analysis.isCouple && `Precio total dividido entre 2 personas`}
+            {analysis.isGroup && `Se aplica individualmente cuando hay 3+ personas totales`}
+            {analysis.type === 'individual' && `Precio por persona individual`}
+            {analysis.type === 'unknown' && `Añade palabras clave para mejor detección`}
+          </p>
+        </div>
+      </div>
+      
+      {analysis.examples.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+          <p className="text-xs font-semibold mb-1">🧪 Ejemplos de uso:</p>
+          <ul className="text-xs space-y-0.5 opacity-90">
+            {analysis.examples.map((example, i) => (
+              <li key={i} className="flex items-start gap-1">
+                <span className="text-current opacity-60 shrink-0">•</span>
+                <span>{example}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function getTypeColor(type: string) {
+  switch (type) {
+    case 'habitacion-fija': return 'blue'
+    case 'promo-pareja': return 'pink'
+    case 'precio-grupal': return 'green'
+    case 'individual': return 'gray'
+    default: return 'yellow'
+  }
+}
+
+function getTypeIcon(type: string) {
+  switch (type) {
+    case 'habitacion-fija': return '🏨'
+    case 'promo-pareja': return '💕'
+    case 'precio-grupal': return '👥'
+    case 'individual': return '👤'
+    default: return '📦'
+  }
+}
+
 async function fetchTours(): Promise<Tour[]> {
   try {
     const res = await fetch(`${API_URL}/api/tours`)
@@ -2133,7 +2299,7 @@ function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArra
               <div className="grid grid-cols-2 gap-3">
                 <input
                   type="text"
-                  placeholder="Etiqueta (Ej: Individual)"
+                  placeholder="Etiqueta (Ej: Individual, Triple, Cuádruple)"
                   value={option.label}
                   onChange={(e) => {
                     const updated = [...(formData.priceOptions || [])]
@@ -2165,6 +2331,8 @@ function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArra
                 }}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
+              {/* Package Intelligence Component */}
+              <PackageIntelligence label={option.label} price={option.price} />
             </div>
           ))}
           <button

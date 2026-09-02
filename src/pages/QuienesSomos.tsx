@@ -100,7 +100,7 @@ export default function QuienesSomos() {
                 <strong>Peru In Travel</strong> es una agencia de viajes ubicada en <strong>Jr. Los Nogales 345, Los Ficus, Santa Anita, Lima</strong>, especializada en paquetes turísticos y tours dentro del Perú. Ofrecemos destinos en la costa, sierra y selva: Paracas, Huacachina, Lunahuaná, Huancaya, Selva Central y muchos más.
               </p>
               <p>
-                Operamos bajo la razón social <strong>Lovi Group Perú E.I.R.L.</strong> y estamos formalmente registrados en <strong>Mincetur desde 2022</strong>, lo que garantiza que cada servicio que ofrecemos cumple con los estándares oficiales de calidad y seguridad turística del Perú.
+                Operamos bajo la razón social <strong>LOVI GROUP PERU E.I.R.L.</strong> con nombre comercial <strong>Peru In Travel</strong> y estamos formalmente registrados en <strong>Mincetur desde 2022</strong>, lo que garantiza que cada servicio que ofrecemos cumple con los estándares oficiales de calidad y seguridad turística del Perú.
               </p>
               <p>
                 Nuestro enfoque está en las <strong>experiencias personalizadas</strong>: adaptamos cada tour a tu grupo, fechas y preferencias, con guías capacitados y asistencia completa antes, durante y después del viaje.

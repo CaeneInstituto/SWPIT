@@ -13,13 +13,13 @@ if (!CULQI_PUBLIC_KEY) {
 }
 
 const PAYMENT_INFO = {
-  yape:     { number: '+51 929 648 380', name: 'Peru In Travel' },
-  plin:     { number: '+51 929 648 380', name: 'Peru In Travel' },
+  yape:     { number: '+51 929 648 380', name: 'LOVI GROUP PERU E.I.R.L.' },
+  plin:     { number: '+51 929 648 380', name: 'LOVI GROUP PERU E.I.R.L.' },
   transfer: {
     bank: 'BCP',
     account: '000-000000000',
     cci: '00200000000000000000',
-    name: 'Peru In Travel',
+    name: 'LOVI GROUP PERU E.I.R.L.',
   },
 }
 
@@ -272,7 +272,7 @@ export default function PaymentModal({ onClose }: Props) {
                     <p className="font-bold text-gray-800 text-lg">
                       {method === 'yape' ? PAYMENT_INFO.yape.number : PAYMENT_INFO.plin.number}
                     </p>
-                    <p className="text-gray-500 text-sm">Peru In Travel</p>
+                    <p className="text-gray-500 text-sm">LOVI GROUP PERU E.I.R.L.</p>
                   </div>
                   {method === 'yape' ? (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
@@ -405,7 +405,9 @@ export default function PaymentModal({ onClose }: Props) {
                         doc.setTextColor(255,255,255); doc.setFontSize(22); doc.setFont('helvetica','bold')
                         doc.text('PERU IN TRAVEL', 105, 14, { align: 'center' })
                         doc.setFontSize(11); doc.setFont('helvetica','normal')
-                        doc.text('Voucher de Reserva Confirmada', 105, 25, { align: 'center' })
+                        doc.text('LOVI GROUP PERU E.I.R.L.', 105, 21, { align: 'center' })
+                        doc.setFontSize(11); doc.setFont('helvetica','normal')
+                        doc.text('Voucher de Reserva Confirmada', 105, 28, { align: 'center' })
                         doc.setTextColor(...gray); doc.setFontSize(10)
                         let y = 48
                         const row = (label: string, val: string) => {
@@ -828,7 +830,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
           orderId, // ID único para prevenir doble cobro
           email,
           buyerName: holderName,
-          description: tourNames.length ? `Reserva: ${tourNames.join(', ')}` : 'Reserva Peru In Travel',
+          description: tourNames.length ? `Reserva: ${tourNames.join(', ')}` : 'Reserva LOVI GROUP PERU E.I.R.L.',
           metadata: {
             paquetes: tourNames.join(' | '),
             tipo: 'Pago completo',
@@ -925,7 +927,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
     const orderId = Date.now().toString()
     
     window.Culqi.settings({
-      title: 'Peru In Travel',
+      title: 'Peru In Travel - LOVI GROUP PERU E.I.R.L.',
       currency: 'PEN',
       amount: Math.round(reserveAmount * 100), // Culqi espera céntimos
       order: orderId
@@ -935,7 +937,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       lang: 'es',
       modal: true,
       style: {
-        logo: 'https://swpit.vercel.app/logo.png',
+        logo: '/logo.png',
         maincolor: '#0A6C6F',
         buttontext: '#ffffff',
         maintext: '#4A4A4A',

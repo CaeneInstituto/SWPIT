@@ -65,7 +65,8 @@ export default function LibroReclamaciones() {
           <div className="bg-gray-50 border-l-4 border-brand-teal p-6 rounded-r-xl mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-3">Datos de la Empresa</h2>
             <div className="grid md:grid-cols-2 gap-3 text-sm">
-              <p><strong>Razón Social:</strong> Peru In Travel</p>
+              <p><strong>Razón Social:</strong> LOVI GROUP PERU E.I.R.L.</p>
+              <p><strong>Razón Comercial:</strong> Peru In Travel</p>
               <p><strong>RUC:</strong> 20606474467</p>
               <p><strong>Dirección:</strong> Lima, Perú</p>
               <p><strong>Teléfono:</strong> +51 929 648 380</p>

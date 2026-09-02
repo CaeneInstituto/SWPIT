@@ -1,4 +1,4 @@
-# Sistema de Registro de Compras - Peru In Travel
+# Sistema de Registro de Compras - Peru In Travel (LOVI GROUP PERU E.I.R.L.)
 
 ## 📋 Descripción
 
@@ -142,4 +142,4 @@ Para más información sobre el sistema de compras, contacta al equipo de desarr
 
 ---
 
-**Peru In Travel** - Sistema de gestión de compras v1.0
+**LOVI GROUP PERU E.I.R.L. (Peru In Travel)** - Sistema de gestión de compras v1.0
