@@ -154,40 +154,38 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
       return
     }
 
-    // Group packages by type and create cart items
-    const packageGroups = personPackages.reduce((acc, p) => {
-      const key = p.packageOption.label
-      if (!acc[key]) {
-        acc[key] = {
-          option: p.packageOption,
-          count: 0,
-          totalPrice: 0
-        }
-      }
-      acc[key].count += 1
-      acc[key].totalPrice += p.priceValue
-      return acc
-    }, {} as Record<string, any>)
+    // Calcular precio total de todos los paquetes
+    const totalPrice = personPackages.reduce((sum, p) => sum + p.priceValue, 0)
+    const totalPersonsInReservation = personPackages.length
+    
+    // Crear descripción combinada de los paquetes
+    const packageSummary = Object.entries(
+      personPackages.reduce((acc, p) => {
+        const key = p.packageOption.label
+        acc[key] = (acc[key] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+    ).map(([label, count]) => `${label} (${count})`).join(' + ')
+    
+    // Verificar si algún paquete tiene alojamiento
+    const hasAccommodation = personPackages.some(p => 
+      detectHasAccommodation(p.packageOption.label, tour.days)
+    )
 
-    // Add each package group to cart
-    Object.values(packageGroups).forEach((group: any) => {
-      const personsPerPackage = detectPersonsPerPackage(group.option.label)
-      const hasAccommodation = detectHasAccommodation(group.option.label, tour.days)
-
-      addItem({
-        tourId: tour.id,
-        tourName: tour.name,
-        tourImage: tour.image,
-        priceOption: group.option.label,
-        priceValue: group.option.price ? parseFloat(group.option.price.replace(/[^\d.]/g, '')) : group.totalPrice / group.count,
-        quantity: group.count,
-        travelDate,
-        personsPerPackage,
-        boardingPoints: tour.boardingPoints,
-        hasAccommodation,
-        customTotalPrice: group.totalPrice, // Store custom total for dynamic pricing
-        totalPersons: personPackages.length
-      })
+    // Agregar UN SOLO item al carrito con toda la información combinada
+    addItem({
+      tourId: tour.id,
+      tourName: tour.name,
+      tourImage: tour.image,
+      priceOption: packageSummary,
+      priceValue: totalPrice / totalPersonsInReservation, // Precio promedio por persona
+      quantity: 1, // Siempre 1 porque es una reserva completa
+      travelDate,
+      personsPerPackage: totalPersonsInReservation, // Total de personas
+      boardingPoints: tour.boardingPoints,
+      hasAccommodation,
+      customTotalPrice: totalPrice, // Precio total calculado
+      totalPersons: totalPersonsInReservation // Total real de personas
     })
 
     setShowModal(false)

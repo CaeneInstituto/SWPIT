@@ -63,8 +63,19 @@ export default function PaymentModal({ onClose }: Props) {
     amount: string
   } | null>(null)
   
-  // Calcular total de personas del carrito (sumando personsPerPackage * quantity de cada item)
-  const totalPersonsFromCart = items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+  // Calcular total de personas del carrito
+  const totalPersonsFromCart = (() => {
+    // Buscar si hay algún item con totalPersons definido (sistema dinámico nuevo)
+    const itemWithTotalPersons = items.find(item => item.totalPersons && item.totalPersons > 0)
+    
+    // Si existe, usar ese totalPersons (es el total real de la reserva)
+    if (itemWithTotalPersons) {
+      return itemWithTotalPersons.totalPersons
+    }
+    
+    // Sino, usar el cálculo antiguo (sumar todos los items)
+    return items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+  })()
   
   // Verificar si hay algún paquete con alojamiento
   const hasAnyAccommodation = items.some(item => item.hasAccommodation)
@@ -74,7 +85,7 @@ export default function PaymentModal({ onClose }: Props) {
   
   // Inicializar pasajeros según la cantidad del carrito
   const initializePassengers = () => {
-    const passengerCount = Math.max(1, totalPersonsFromCart)
+    const passengerCount = Math.max(1, totalPersonsFromCart || 0)
     return Array.from({ length: passengerCount }, () => ({ nombre: '', dni: '', edad: '' }))
   }
   
@@ -121,7 +132,10 @@ export default function PaymentModal({ onClose }: Props) {
       dni: dni || '',
       method: methodLabels[method],
       tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
-      totalPersons: totalPersonsFromCart,
+      totalPersons: (() => {
+        const itemWithTotal = items.find(item => item.totalPersons && item.totalPersons > 0)
+        return itemWithTotal ? itemWithTotal.totalPersons : items.reduce((sum, item) => sum + item.personsPerPackage * item.quantity, 0)
+      })(),
       travelDate: items.map(item => item.travelDate).join('; '),
       totalPrice: totalPrice.toFixed(2),
       reserveAmount: amountToPay.toFixed(2),
@@ -752,7 +766,18 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
   const [comentario, setComentario] = useState('')
   
   // Calcular total de personas del carrito
-  const totalPersonsFromCart = items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+  const totalPersonsFromCart = (() => {
+    // Buscar si hay algún item con totalPersons definido (sistema dinámico nuevo)
+    const itemWithTotalPersons = items.find(item => item.totalPersons && item.totalPersons > 0)
+    
+    // Si existe, usar ese totalPersons (es el total real de la reserva)
+    if (itemWithTotalPersons) {
+      return itemWithTotalPersons.totalPersons
+    }
+    
+    // Sino, usar el cálculo antiguo (sumar todos los items)
+    return items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+  })()
   
   // Verificar si hay algún paquete con alojamiento
   const hasAnyAccommodation = items.some(item => item.hasAccommodation)
