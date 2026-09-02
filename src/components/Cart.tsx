@@ -33,7 +33,7 @@ export default function Cart() {
     message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n\n`
     message += `¿Podrían confirmar disponibilidad y enviarme más detalles?`
 
-    const whatsappUrl = `https://wa.me/51984123456?text=${encodeURIComponent(message)}`
+    const whatsappUrl = `https://wa.me/51929648380?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
     
     // Close cart after sending

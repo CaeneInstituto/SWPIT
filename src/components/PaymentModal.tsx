@@ -149,24 +149,39 @@ export default function PaymentModal({ onClose }: Props) {
 
     // Construir mensaje de WhatsApp
     let message = `🌄 *Reserva Peru In Travel*\n\n`
-    message += `👤 *Nombre:* ${name || '(sin especificar)'}\n`
-    if (dni) message += `🆔 *DNI:* ${dni}\n`
+    message += `👤 *Cliente:* ${name || '(sin especificar)'}\n`
+    if (dni) message += `🆔 *DNI Cliente:* ${dni}\n`
     message += `📱 *Teléfono:* ${phone || '(sin especificar)'}\n`
     message += `💳 *Método de pago:* ${methodLabels[method]}\n\n`
-    message += `📦 *Paquetes:*\n`
+    message += `📦 *Tours reservados:*\n`
     items.forEach((item, i) => {
       message += `${i + 1}. ${item.tourName}\n`
-      message += `   Opción: ${item.priceOption}\n`
-      message += `   Personas: ${item.quantity}\n`
-      message += `   Fecha: ${item.travelDate}\n`
-      message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
+      message += `   📦 Opción: ${item.priceOption}\n`
+      message += `   📅 Fecha: ${item.travelDate}\n`
+      message += `   👥 Personas: ${item.quantity} x ${item.personsPerPackage || 1} = ${item.quantity * (item.personsPerPackage || 1)} persona(s)\n`
+      message += `   💵 Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
-    message += `💰 *Total: S/ ${totalPrice.toFixed(2)}*\n`
-    message += `💵 *Monto a pagar: S/ ${amountToPay.toFixed(2)}*${isPartialPayment ? ' (50% adelanto)' : ''}\n`
+    message += `💰 *Total paquete: S/ ${totalPrice.toFixed(2)}*\n`
+    message += `💵 *Monto a pagar ahora: S/ ${amountToPay.toFixed(2)}*${isPartialPayment ? ' (50% adelanto)' : ' (pago completo)'}\n`
+    if (isPartialPayment) message += `💰 *Saldo pendiente: S/ ${(totalPrice - amountToPay).toFixed(2)}* (se paga antes del viaje)\n`
     if (embarque) message += `📍 *Punto de embarque:* ${embarque}\n`
-    if (voucherNote) message += `📎 *Nota:* ${voucherNote}\n`
-    if (comentario) message += `💬 *Comentario:* ${comentario}\n`
-    message += `\nPor favor confirmen la reserva. ¡Gracias! 🙏`
+    if (habitacion) message += `🛏️ *Habitación:* ${habitacion}\n`
+    
+    // Agregar datos de pasajeros
+    const pasajerosConDatos = passengers.filter(p => p.nombre || p.dni || p.edad)
+    if (pasajerosConDatos.length > 0) {
+      message += `\n👥 *Datos de pasajeros:*\n`
+      pasajerosConDatos.forEach((p, i) => {
+        message += `${i+1}. ${p.nombre || 'Sin nombre'} (DNI: ${p.dni || 'N/A'}, Edad: ${p.edad || 'N/A'})\n`
+      })
+    }
+    
+    if (voucherNote) message += `\n📎 *Nota del voucher:* ${voucherNote}\n`
+    if (comentario) message += `💬 *Comentarios adicionales:* ${comentario}\n`
+    
+    message += `\n✅ *Estado:* PENDIENTE CONFIRMACIÓN\n`
+    message += `🕒 *Fecha de solicitud:* ${new Date().toLocaleString('es-PE')}\n\n`
+    message += `Por favor confirmen disponibilidad y envíen datos para el ${methodLabels[method].toLowerCase()}. ¡Gracias! 🙏✨`
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
     clearCart()
     setCartOpen(false)
@@ -441,19 +456,33 @@ export default function PaymentModal({ onClose }: Props) {
                       onClick={() => {
                         const msg =
                           `🎉 *¡Reserva Confirmada – Peru In Travel!*\n\n` +
-                          `📋 *ID:* ${cardPaymentData.chargeId}\n` +
-                          `👤 *Nombre:* ${cardPaymentData.holderName}\n` +
-                          (cardPaymentData.dni ? `🆔 *DNI:* ${cardPaymentData.dni}\n` : '') +
+                          `📋 *ID Transacción:* ${cardPaymentData.chargeId}\n` +
+                          `👤 *Cliente:* ${cardPaymentData.holderName}\n` +
+                          (cardPaymentData.dni ? `🆔 *DNI Cliente:* ${cardPaymentData.dni}\n` : '') +
                           `📧 *Email:* ${cardPaymentData.email}\n` +
-                          (cardPaymentData.phone ? `📱 *Tel:* ${cardPaymentData.phone}\n` : '') +
-                          `💳 *Total pagado:* S/ ${cardPaymentData.amount}\n\n` +
-                          `🎒 *Tours:*\n` +
+                          (cardPaymentData.phone ? `📱 *Teléfono:* ${cardPaymentData.phone}\n` : '') +
+                          `💳 *Total pagado:* S/ ${cardPaymentData.amount}\n` +
+                          `💰 *Método:* Tarjeta de crédito (Pago completo 100%)\n\n` +
+                          `🎒 *Tours reservados:*\n` +
                           items.map((it, i) =>
-                            `${i+1}. ${it.tourName}\n   📅 ${it.travelDate} · 👥 ${it.quantity} persona(s)`
-                          ).join('\n') +
-                          (cardPaymentData.embarque ? `\n\n📍 *Embarque:* ${cardPaymentData.embarque}` : '') +
-                          (cardPaymentData.comentario ? `\n💬 *Nota:* ${cardPaymentData.comentario}` : '') +
-                          `\n\n¡Gracias por elegirnos! 🌄`
+                            `${i+1}. ${it.tourName}\n` +
+                            `   📦 Opción: ${it.priceOption}\n` +
+                            `   📅 Fecha: ${it.travelDate}\n` +
+                            `   👥 Personas: ${it.quantity} x ${it.personsPerPackage || 1} = ${it.quantity * (it.personsPerPackage || 1)} persona(s)\n` +
+                            `   💵 Subtotal: S/ ${(it.priceValue * it.quantity).toFixed(2)}`
+                          ).join('\n\n') +
+                          (cardPaymentData.embarque ? `\n\n📍 *Punto de embarque:* ${cardPaymentData.embarque}` : '') +
+                          (cardPaymentData.habitacion ? `\n🛏️ *Habitación:* ${cardPaymentData.habitacion}` : '') +
+                          (cardPaymentData.passengers && cardPaymentData.passengers.length > 0 ? 
+                            `\n\n👥 *Datos de pasajeros:*\n` +
+                            cardPaymentData.passengers.map((p, i) => 
+                              `${i+1}. ${p.nombre || 'Sin nombre'} (DNI: ${p.dni || 'N/A'}, Edad: ${p.edad || 'N/A'})`
+                            ).join('\n')
+                            : '') +
+                          (cardPaymentData.comentario ? `\n\n💬 *Comentarios:* ${cardPaymentData.comentario}` : '') +
+                          `\n\n✅ *Estado:* CONFIRMADO - Pago procesado exitosamente\n` +
+                          `🕒 *Fecha de reserva:* ${new Date().toLocaleString('es-PE')}\n\n` +
+                          `¡Gracias por confiar en Peru In Travel! 🌄✨`
                         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank')
                       }}
                       className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
