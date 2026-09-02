@@ -19,6 +19,18 @@ export interface CartItem {
 export function detectPersonsPerPackage(optionLabel: string): number {
   const label = optionLabel.toLowerCase()
   
+  // Detectar patrones mixtos/flexibles usando "/" como separador principal
+  if (label.includes('/')) {
+    // Contar cuántos tipos diferentes de habitación menciona
+    const roomTypes = ['individual', 'doble', 'triple', 'cuádruple', 'cuadruple', 'quintuple', 'quíntuple']
+    const foundTypes = roomTypes.filter(type => label.includes(type))
+    
+    // Si encuentra 2 o más tipos diferentes, es flexible
+    if (foundTypes.length >= 2) {
+      return -1 // Indicador especial para habitación flexible
+    }
+  }
+  
   // Detectar patrones específicos de habitaciones (orden importa)
   if (label.includes('quintuple') || label.includes('quíntuple')) return 5
   if (label.includes('cuádruple') || label.includes('cuadruple')) return 4

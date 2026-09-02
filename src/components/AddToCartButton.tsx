@@ -55,28 +55,55 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
                        label.includes('matrimonial')
     
     // Detectar cuántas personas incluye este paquete
-    const personsInPackage = detectPersonsPerPackage(packageOption.label)
+    // Si el usuario eligió flexible, usar _flexibleChoice, sino detectar normalmente
+    let personsInPackage = packageOption._flexibleChoice || detectPersonsPerPackage(packageOption.label)
     
-    // IMPORTANTE: Limpiar cualquier asignación previa de esta persona antes de asignar
+    // Si detectPersonsPerPackage retorna -1 (flexible) pero no hay _flexibleChoice, usar 2 por defecto
+    if (personsInPackage === -1) {
+      personsInPackage = 2 // Default a doble si no se especificó
+    }
+    
+    // IMPORTANTE: Limpiar solo si esta persona cambia de un tipo que afecta a otros
     setPersonPackages(prev => {
-      // Primero limpiamos cualquier grupo donde esta persona esté incluida
-      let cleanedPackages = prev.map(p => {
-        // Si esta persona tenía un paquete que agrupaba a otros, limpiar el grupo
-        const currentLabel = p.packageOption?.label?.toLowerCase() || ''
-        const currentPersonsInPackage = p.packageOption ? detectPersonsPerPackage(p.packageOption.label) : 1
-        
-        // Si la persona que estamos cambiando era la "principal" de un grupo, limpiar todo el grupo
-        if (p.personIndex === personIndex && currentPersonsInPackage > 1) {
-          return { ...p, packageOption: null, priceValue: 0 }
+      const previousPackage = prev[personIndex]?.packageOption
+      const wasGroupPackage = previousPackage && (
+        previousPackage.label.toLowerCase().includes('pareja') ||
+        previousPackage.label.toLowerCase().includes('triple') ||
+        previousPackage.label.toLowerCase().includes('cuádruple') ||
+        previousPackage.label.toLowerCase().includes('quintuple') ||
+        (previousPackage.label.toLowerCase().includes('doble') && !previousPackage.label.toLowerCase().includes('pareja'))
+      )
+      
+      // Solo limpiar el grupo anterior si esta persona tenía un paquete grupal
+      let cleanedPackages = [...prev]
+      if (wasGroupPackage) {
+        // Limpiar solo las personas que estaban en el mismo grupo
+        const prevPersonsInPackage = previousPackage._flexibleChoice || detectPersonsPerPackage(previousPackage.label)
+        if (prevPersonsInPackage > 1 && prevPersonsInPackage !== -1) {
+          // Calcular el rango del grupo anterior
+          let groupStartIndex = personIndex
+          if (prevPersonsInPackage === 2) {
+            groupStartIndex = Math.floor(personIndex / 2) * 2
+          } else if (prevPersonsInPackage === 3) {
+            groupStartIndex = Math.floor(personIndex / 3) * 3
+          } else if (prevPersonsInPackage === 4) {
+            groupStartIndex = Math.floor(personIndex / 4) * 4
+          } else if (prevPersonsInPackage === 5) {
+            groupStartIndex = Math.floor(personIndex / 5) * 5
+          }
+          const groupEndIndex = groupStartIndex + prevPersonsInPackage - 1
+          
+          cleanedPackages = prev.map((p, idx) => {
+            // Solo limpiar las personas que estaban en el mismo grupo específico
+            if (p.personIndex >= groupStartIndex && 
+                p.personIndex <= groupEndIndex && 
+                p.packageOption?.label === previousPackage.label) {
+              return { ...p, packageOption: null, priceValue: 0 }
+            }
+            return p
+          })
         }
-        
-        // Si esta persona estaba incluida en un grupo, también limpiarla
-        if (p.priceValue === 0 && p.packageOption?.label === prev[personIndex]?.packageOption?.label) {
-          return { ...p, packageOption: null, priceValue: 0 }
-        }
-        
-        return p
-      })
+      }
       
       // Ahora asignar el nuevo paquete
       if (isCouplePacked) {
@@ -120,16 +147,29 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
         
         return cleanedPackages.map(p => {
           if (p.personIndex >= startIndex && p.personIndex <= endIndex) {
-            return { 
-              ...p, 
-              packageOption, 
-              priceValue: p.personIndex === startIndex ? priceValue : 0 
+            // Para habitaciones, verificar si cobran por persona (c/u) o total
+            const isCouplePricing = label.includes('pareja') // Solo parejas cobran precio total
+            
+            if (isCouplePricing) {
+              // Para parejas: el primero paga todo, el segundo 0
+              return { 
+                ...p, 
+                packageOption, 
+                priceValue: p.personIndex === startIndex ? priceValue : 0 
+              }
+            } else {
+              // Para habitaciones normales (Triple, Cuádruple, etc.): cada uno paga su parte
+              return { 
+                ...p, 
+                packageOption, 
+                priceValue: priceValue // Cada persona paga el precio individual (c/u)
+              }
             }
           }
           return p
         })
       } else {
-        // Para paquetes individuales
+        // Para paquetes individuales - solo asignar a esta persona
         return cleanedPackages.map(p => 
           p.personIndex === personIndex 
             ? { ...p, packageOption, priceValue }
@@ -181,7 +221,7 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
       priceValue: totalPrice / totalPersonsInReservation, // Precio promedio por persona
       quantity: 1, // Siempre 1 porque es una reserva completa
       travelDate,
-      personsPerPackage: totalPersonsInReservation, // Total de personas
+      personsPerPackage: totalPersonsInReservation, // Usar el total real de personas, no el detectado
       boardingPoints: tour.boardingPoints,
       hasAccommodation,
       customTotalPrice: totalPrice, // Precio total calculado
@@ -478,7 +518,54 @@ function DynamicCartModal({
                             onChange={(e) => {
                               const selectedOption = tour.priceOptions!.find(opt => opt.label === e.target.value)
                               if (selectedOption) {
-                                updatePersonPackage(index, selectedOption)
+                                const personsDetected = detectPersonsPerPackage(selectedOption.label)
+                                
+                                // Si es habitación flexible (mixta), preguntar al usuario
+                                if (personsDetected === -1) {
+                                  // Detectar qué tipos están disponibles en la etiqueta
+                                  const labelLower = selectedOption.label.toLowerCase()
+                                  const availableTypes = []
+                                  
+                                  if (labelLower.includes('individual')) availableTypes.push({ name: 'Individual', persons: 1 })
+                                  if (labelLower.includes('doble') || labelLower.includes('matrimonial')) availableTypes.push({ name: 'Doble', persons: 2 })
+                                  if (labelLower.includes('triple')) availableTypes.push({ name: 'Triple', persons: 3 })
+                                  if (labelLower.includes('cuádruple') || labelLower.includes('cuadruple')) availableTypes.push({ name: 'Cuádruple', persons: 4 })
+                                  if (labelLower.includes('quintuple') || labelLower.includes('quíntuple')) availableTypes.push({ name: 'Quintuple', persons: 5 })
+                                  
+                                  if (availableTypes.length >= 2) {
+                                    // Crear el mensaje de opciones
+                                    let message = `El paquete "${selectedOption.label}" permite múltiples tipos de habitación:\\n\\n`
+                                    availableTypes.forEach((type, i) => {
+                                      message += `${i + 1}. ${type.name} (${type.persons} personas)\\n`
+                                    })
+                                    message += `\\nElige el número de opción (1-${availableTypes.length}):`
+                                    
+                                    const choice = prompt(message)
+                                    const choiceIndex = choice ? parseInt(choice) - 1 : -1
+                                    
+                                    if (choiceIndex >= 0 && choiceIndex < availableTypes.length) {
+                                      const selectedType = availableTypes[choiceIndex]
+                                      
+                                      // Crear una opción temporal con el tipo elegido
+                                      const adjustedOption = {
+                                        ...selectedOption,
+                                        label: selectedOption.label + ` (${selectedType.name})`,
+                                        _originalLabel: selectedOption.label,
+                                        _flexibleChoice: selectedType.persons
+                                      }
+                                      
+                                      updatePersonPackage(index, adjustedOption)
+                                    } else {
+                                      alert('Opción inválida. Por favor intenta de nuevo.')
+                                      return
+                                    }
+                                  } else {
+                                    // Fallback por si no detecta tipos
+                                    updatePersonPackage(index, selectedOption)
+                                  }
+                                } else {
+                                  updatePersonPackage(index, selectedOption)
+                                }
                               }
                             }}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
@@ -556,7 +643,7 @@ function DynamicCartModal({
                               if (isPareja) {
                                 optionText += ' (precio total para 2)'
                               } else if (personsNeeded > 1 && !isGroup) {
-                                optionText += ` (habitación para ${personsNeeded})`
+                                optionText += ` (habitación para ${personsNeeded > 0 ? personsNeeded : 2})`
                               }
                               
                               return (
@@ -576,7 +663,8 @@ function DynamicCartModal({
                   
                   // Detectar habitaciones agrupadas mejorado
                   const label = currentPackage.packageOption.label.toLowerCase()
-                  const personsInRoom = detectPersonsPerPackage(currentPackage.packageOption.label)
+                  const personsInRoom = currentPackage.packageOption._flexibleChoice || detectPersonsPerPackage(currentPackage.packageOption.label)
+                  const displayPersonsInRoom = personsInRoom > 0 ? personsInRoom : (currentPackage.packageOption._flexibleChoice || 2) // fallback para mixtos
                   const isRoomPackage = label.includes('habitación') || 
                                        label.includes('triple') ||
                                        label.includes('cuádruple') ||
@@ -611,7 +699,54 @@ function DynamicCartModal({
                           onChange={(e) => {
                             const selectedOption = tour.priceOptions!.find(opt => opt.label === e.target.value)
                             if (selectedOption) {
-                              updatePersonPackage(index, selectedOption)
+                              const personsDetected = detectPersonsPerPackage(selectedOption.label)
+                              
+                              // Si es habitación flexible (mixta), preguntar al usuario
+                              if (personsDetected === -1) {
+                                // Detectar qué tipos están disponibles en la etiqueta
+                                const labelLower = selectedOption.label.toLowerCase()
+                                const availableTypes = []
+                                
+                                if (labelLower.includes('individual')) availableTypes.push({ name: 'Individual', persons: 1 })
+                                if (labelLower.includes('doble') || labelLower.includes('matrimonial')) availableTypes.push({ name: 'Doble', persons: 2 })
+                                if (labelLower.includes('triple')) availableTypes.push({ name: 'Triple', persons: 3 })
+                                if (labelLower.includes('cuádruple') || labelLower.includes('cuadruple')) availableTypes.push({ name: 'Cuádruple', persons: 4 })
+                                if (labelLower.includes('quintuple') || labelLower.includes('quíntuple')) availableTypes.push({ name: 'Quintuple', persons: 5 })
+                                
+                                if (availableTypes.length >= 2) {
+                                  // Crear el mensaje de opciones
+                                  let message = `El paquete "${selectedOption.label}" permite múltiples tipos de habitación:\\n\\n`
+                                  availableTypes.forEach((type, i) => {
+                                    message += `${i + 1}. ${type.name} (${type.persons} personas)\\n`
+                                  })
+                                  message += `\\nElige el número de opción (1-${availableTypes.length}):`
+                                  
+                                  const choice = prompt(message)
+                                  const choiceIndex = choice ? parseInt(choice) - 1 : -1
+                                  
+                                  if (choiceIndex >= 0 && choiceIndex < availableTypes.length) {
+                                    const selectedType = availableTypes[choiceIndex]
+                                    
+                                    // Crear una opción temporal con el tipo elegido
+                                    const adjustedOption = {
+                                      ...selectedOption,
+                                      label: selectedOption.label + ` (${selectedType.name})`,
+                                      _originalLabel: selectedOption.label,
+                                      _flexibleChoice: selectedType.persons
+                                    }
+                                    
+                                    updatePersonPackage(index, adjustedOption)
+                                  } else {
+                                    alert('Opción inválida. Por favor intenta de nuevo.')
+                                    return
+                                  }
+                                } else {
+                                  // Fallback por si no detecta tipos
+                                  updatePersonPackage(index, selectedOption)
+                                }
+                              } else {
+                                updatePersonPackage(index, selectedOption)
+                              }
                             }
                           }}
                           disabled={isSecondInPair || isIncludedInRoom}
@@ -693,7 +828,7 @@ function DynamicCartModal({
                             if (isPareja) {
                               optionText += ' (precio total para 2)'
                             } else if (personsNeeded > 1 && !isGroup) {
-                              optionText += ` (habitación para ${personsNeeded})`
+                              optionText += ` (habitación para ${personsNeeded > 0 ? personsNeeded : 2})`
                             }
                             
                             return (
@@ -709,7 +844,7 @@ function DynamicCartModal({
                         <div className="text-xs text-gray-600 mt-1">
                           Costo: S/ {currentPackage.priceValue.toFixed(2)}
                           {isCouplePaired && !isSecondInPair && ' (total para 2 personas)'}
-                          {isRoomPackage && !isIncludedInRoom && ` (total para ${personsInRoom} personas)`}
+                          {isRoomPackage && !isIncludedInRoom && ` (total para ${displayPersonsInRoom} personas)`}
                         </div>
                       )}
                     </div>

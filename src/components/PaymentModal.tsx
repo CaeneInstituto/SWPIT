@@ -24,7 +24,7 @@ const PAYMENT_INFO = {
 }
 
 type PaymentMethod = 'yape' | 'plin' | 'transfer' | 'card'
-type ModalStep     = 'method' | 'instructions' | 'confirm' | 'passengers'
+type ModalStep     = 'method' | 'yape-validation' | 'instructions' | 'confirm' | 'passengers'
 
 interface Props { onClose: () => void }
 
@@ -48,6 +48,42 @@ export default function PaymentModal({ onClose }: Props) {
   const [embarque, setEmbarque] = useState('')
   const [habitacion, setHabitacion] = useState('')
   const [comentario, setComentario] = useState('')
+
+  // Estados para validación de Yape
+  const [yapePhone, setYapePhone] = useState('')
+  const [yapeCode, setYapeCode] = useState('')
+  const [yapeValidated, setYapeValidated] = useState(false)
+
+  // Función para validar el pago de Yape
+  const validateYapePayment = () => {
+    const expectedAmount = (totalPrice * 0.5).toFixed(2)
+    
+    // Validaciones básicas
+    if (!yapePhone.trim()) {
+      alert('Por favor ingresa tu número de celular Yape')
+      return false
+    }
+    
+    if (!/^\d{9}$/.test(yapePhone.replace(/\D/g, ''))) {
+      alert('Por favor ingresa un número de celular válido (9 dígitos)')
+      return false
+    }
+    
+    if (!yapeCode.trim()) {
+      alert('Por favor ingresa el código de aprobación de tu Yape')
+      return false
+    }
+    
+    if (yapeCode.length < 4) {
+      alert('El código de aprobación debe tener al menos 4 caracteres')
+      return false
+    }
+    
+    // Simular validación (en producción aquí se haría una llamada a API)
+    setYapeValidated(true)
+    setStep('instructions')
+    return true
+  }
 
   // Datos del pago exitoso con tarjeta
   const [cardPaymentData, setCardPaymentData] = useState<{
@@ -74,7 +110,7 @@ export default function PaymentModal({ onClose }: Props) {
     }
     
     // Sino, usar el cálculo antiguo (sumar todos los items)
-    return items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+    return items.reduce((sum, item) => sum + (item.personsPerPackage > 0 ? (item.personsPerPackage * item.quantity) : 1), 0)
   })()
   
   // Verificar si hay algún paquete con alojamiento
@@ -134,7 +170,7 @@ export default function PaymentModal({ onClose }: Props) {
       tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
       totalPersons: (() => {
         const itemWithTotal = items.find(item => item.totalPersons && item.totalPersons > 0)
-        return itemWithTotal ? itemWithTotal.totalPersons : items.reduce((sum, item) => sum + item.personsPerPackage * item.quantity, 0)
+        return itemWithTotal ? itemWithTotal.totalPersons : items.reduce((sum, item) => sum + (item.personsPerPackage > 0 ? (item.personsPerPackage * item.quantity) : 1), 0)
       })(),
       travelDate: items.map(item => item.travelDate).join('; '),
       totalPrice: totalPrice.toFixed(2),
@@ -145,7 +181,10 @@ export default function PaymentModal({ onClose }: Props) {
       embarque: embarque || '',
       habitacion: habitacion || '',
       comentario: comentario || '',
-      passengers: passengers.filter(p => p.nombre || p.dni || p.edad) // Solo pasajeros con datos
+      passengers: passengers.filter(p => p.nombre || p.dni || p.edad), // Solo pasajeros con datos
+      // Datos de validación de Yape
+      yapePhone: method === 'yape' && yapeValidated ? yapePhone : '',
+      yapeCode: method === 'yape' && yapeValidated ? yapeCode : ''
     }
 
     // Guardar en BD solo para métodos manuales (NO para tarjeta, eso lo hace /api/charge)
@@ -166,13 +205,22 @@ export default function PaymentModal({ onClose }: Props) {
     message += `👤 *Cliente:* ${name || '(sin especificar)'}\n`
     if (dni) message += `🆔 *DNI Cliente:* ${dni}\n`
     message += `📱 *Teléfono:* ${phone || '(sin especificar)'}\n`
-    message += `💳 *Método de pago:* ${methodLabels[method]}\n\n`
-    message += `📦 *Tours reservados:*\n`
+    message += `💳 *Método de pago:* ${methodLabels[method]}\n`
+    
+    // Agregar datos de validación de Yape si aplica
+    if (method === 'yape' && yapeValidated) {
+      message += `\n📲 *Datos de Yape:*\n`
+      message += `   • Celular Yape: ${yapePhone}\n`
+      message += `   • Código de aprobación: ${yapeCode}\n`
+      message += `   • Monto yapeado: S/ ${(totalPrice * 0.5).toFixed(2)}\n`
+    }
+    
+    message += `\n📦 *Tours reservados:*\n`
     items.forEach((item, i) => {
       message += `${i + 1}. ${item.tourName}\n`
       message += `   📦 Opción: ${item.priceOption}\n`
       message += `   📅 Fecha: ${item.travelDate}\n`
-      message += `   👥 Personas: ${item.quantity} x ${item.personsPerPackage || 1} = ${item.quantity * (item.personsPerPackage || 1)} persona(s)\n`
+      message += `   👥 Personas: ${item.quantity} x ${item.personsPerPackage > 0 ? item.personsPerPackage : 1} = ${item.quantity * (item.personsPerPackage > 0 ? item.personsPerPackage : 1)} persona(s)\n`
       message += `   💵 Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
     message += `💰 *Total paquete: S/ ${totalPrice.toFixed(2)}*\n`
@@ -265,10 +313,100 @@ export default function PaymentModal({ onClose }: Props) {
                   )}
                 </button>
               ))}
-              <button onClick={() => setStep('instructions')}
+              <button onClick={() => {
+                if (method === 'yape' && !yapeValidated) {
+                  setStep('yape-validation')
+                } else {
+                  setStep('instructions')
+                }
+              }}
                 className="w-full mt-4 bg-brand-teal hover:bg-brand-teal-d text-white font-bold py-3 rounded-xl transition-colors">
                 Continuar →
               </button>
+            </div>
+          )}
+
+          {/* STEP 1.5 – Validación de Yape */}
+          {step === 'yape-validation' && (
+            <div className="space-y-4">
+              {/* Header con logo Yape */}
+              <div className="text-center bg-[#6C1DDB]/10 rounded-xl p-6">
+                <div className="w-20 h-20 bg-[#6C1DDB] rounded-full mx-auto flex items-center justify-center text-3xl font-black text-white mb-4">
+                  Y
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Validación de Pago Yape</h3>
+                <p className="text-gray-600 text-sm">
+                  Necesitamos validar que hayas realizado el pago del 50% antes de continuar
+                </p>
+              </div>
+
+              {/* Monto a pagar */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                <p className="text-green-800 font-semibold">Monto a yapear (50% adelanto):</p>
+                <p className="text-3xl font-bold text-green-600 mt-1">S/ {(totalPrice * 0.5).toFixed(2)}</p>
+                <p className="text-sm text-green-600 mt-1">al número: <strong>+51 929 648 380</strong></p>
+              </div>
+
+              {/* Formulario de validación */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ingresa tu número de celular Yape
+                  </label>
+                  <input
+                    type="tel"
+                    value={yapePhone}
+                    onChange={(e) => setYapePhone(e.target.value)}
+                    placeholder="999 999 999"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:ring-2 focus:ring-[#6C1DDB] focus:border-transparent"
+                    maxLength={11}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">El mismo número desde donde hiciste el Yape</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ingresa el código de aprobación
+                  </label>
+                  <input
+                    type="text"
+                    value={yapeCode}
+                    onChange={(e) => setYapeCode(e.target.value.toUpperCase())}
+                    placeholder="Ej: ABC123"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg text-center font-mono focus:outline-none focus:ring-2 focus:ring-[#6C1DDB] focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Encuéntralo en tu Yape, opción "Aprobar compras"
+                  </p>
+                </div>
+              </div>
+
+              {/* Instrucciones visuales */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="font-semibold text-blue-800 mb-2">💡 ¿Cómo encontrar el código?</p>
+                <ol className="list-decimal list-inside text-blue-700 text-sm space-y-1">
+                  <li>Abre tu app Yape</li>
+                  <li>Ve a "Aprobar compras"</li>
+                  <li>Busca la transacción de <strong>S/ {(totalPrice * 0.5).toFixed(2)}</strong></li>
+                  <li>Copia el código de 6 dígitos que aparece</li>
+                </ol>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setStep('method')}
+                  className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  ← Volver
+                </button>
+                <button 
+                  onClick={validateYapePayment}
+                  className="flex-2 bg-[#6C1DDB] hover:bg-[#5A1BB5] text-white font-bold py-3 rounded-xl transition-colors px-8"
+                >
+                  Validar Pago ✓
+                </button>
+              </div>
             </div>
           )}
 
@@ -349,7 +487,13 @@ export default function PaymentModal({ onClose }: Props) {
 
               {method !== 'card' && (
                 <div className="flex gap-3">
-                  <button onClick={() => setStep('method')} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
+                  <button onClick={() => {
+                    setStep('method')
+                    // Resetear validación de Yape si vuelven a elegir método
+                    setYapeValidated(false)
+                    setYapePhone('')
+                    setYapeCode('')
+                  }} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
                     ← Volver
                   </button>
                   <button onClick={() => setStep('confirm')} className="flex-1 bg-brand-teal hover:bg-brand-teal-d text-white font-bold py-3 rounded-xl">
@@ -484,7 +628,7 @@ export default function PaymentModal({ onClose }: Props) {
                             `${i+1}. ${it.tourName}\n` +
                             `   📦 Opción: ${it.priceOption}\n` +
                             `   📅 Fecha: ${it.travelDate}\n` +
-                            `   👥 Personas: ${it.quantity} x ${it.personsPerPackage || 1} = ${it.quantity * (it.personsPerPackage || 1)} persona(s)\n` +
+                            `   👥 Personas: ${it.quantity} x ${it.personsPerPackage > 0 ? it.personsPerPackage : 1} = ${it.quantity * (it.personsPerPackage > 0 ? it.personsPerPackage : 1)} persona(s)\n` +
                             `   💵 Subtotal: S/ ${(it.priceValue * it.quantity).toFixed(2)}`
                           ).join('\n\n') +
                           (cardPaymentData.embarque ? `\n\n📍 *Punto de embarque:* ${cardPaymentData.embarque}` : '') +
@@ -776,7 +920,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
     }
     
     // Sino, usar el cálculo antiguo (sumar todos los items)
-    return items.reduce((sum, item) => sum + (item.personsPerPackage * item.quantity), 0)
+    return items.reduce((sum, item) => sum + (item.personsPerPackage > 0 ? (item.personsPerPackage * item.quantity) : 1), 0)
   })()
   
   // Verificar si hay algún paquete con alojamiento
@@ -871,7 +1015,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
             tourName: item.tourName,
             priceOption: item.priceOption,
             quantity: item.quantity,
-            personsPerPackage: item.personsPerPackage || 1,
+            personsPerPackage: item.personsPerPackage > 0 ? item.personsPerPackage : 1,
             travelDate: item.travelDate
           }))
         }),
