@@ -1203,7 +1203,7 @@ export default function AdminDashboard() {
 
                           {/* Detalles - Botón expandir */}
                           <div className="col-span-1 flex items-center justify-center">
-                            {(purchase.metadata?.pasajeros) || purchase.metadata?.comentario ? (
+                            {(purchase.metadata?.pasajeros) || purchase.metadata?.comentario || purchase.metadata?.yapeScreenshot ? (
                               <button 
                                 onClick={() => {
                                   const row = document.getElementById(`details-${purchase._id}`)
@@ -1222,9 +1222,69 @@ export default function AdminDashboard() {
                         </div>
                         
                         {/* Fila expandible con más detalles */}
-                        {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario || purchase.metadata?.notaVoucher ? (
+                        {(purchase.metadata?.pasajeros && purchase.metadata.pasajeros.length > 0) || purchase.metadata?.comentario || purchase.metadata?.notaVoucher || purchase.metadata?.yapeScreenshot ? (
                           <div id={`details-${purchase._id}`} style={{ display: 'none' }} className="mt-4 pt-4 border-t border-gray-200">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-gray-50 rounded-lg p-4">
+                              
+                              {/* Captura de Yape */}
+                              {purchase.metadata?.yapeScreenshot && (
+                                <div className="md:col-span-2">
+                                  <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                    📸 Comprobante de Yape
+                                  </div>
+                                  <div className="bg-white rounded-lg p-3 border-2 border-purple-200">
+                                    <div className="flex flex-col md:flex-row gap-4 items-start">
+                                      {/* Preview de la imagen */}
+                                      <div className="flex-shrink-0">
+                                        <img 
+                                          src={purchase.metadata.yapeScreenshot} 
+                                          alt="Comprobante Yape" 
+                                          className="max-w-xs max-h-80 rounded-lg shadow-md border border-gray-200 object-contain cursor-pointer hover:scale-105 transition-transform"
+                                          onClick={() => window.open(purchase.metadata.yapeScreenshot, '_blank')}
+                                          title="Click para ver en tamaño completo"
+                                        />
+                                      </div>
+                                      {/* Datos de validación */}
+                                      <div className="flex-1 space-y-2">
+                                        <div className="bg-purple-50 rounded px-3 py-2">
+                                          <span className="font-semibold text-purple-800">📱 Celular Yape:</span>
+                                          <span className="ml-2 text-purple-700 font-mono">{purchase.metadata.yapePhone || 'No registrado'}</span>
+                                        </div>
+                                        <div className="bg-green-50 rounded px-3 py-2">
+                                          <span className="font-semibold text-green-800">💰 Monto Yapeado:</span>
+                                          <span className="ml-2 text-green-700 font-bold">S/ {purchase.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="bg-blue-50 rounded px-3 py-2">
+                                          <span className="font-semibold text-blue-800">📅 Fecha de pago:</span>
+                                          <span className="ml-2 text-blue-700">{new Date(purchase.createdAt).toLocaleString('es-PE')}</span>
+                                        </div>
+                                        <div className="mt-3 flex gap-2">
+                                          <a
+                                            href={purchase.metadata.yapeScreenshot}
+                                            download={`yape-${purchase.buyerName}-${purchase._id}.jpg`}
+                                            className="inline-flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors"
+                                          >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Descargar
+                                          </a>
+                                          <button
+                                            onClick={() => window.open(purchase.metadata.yapeScreenshot, '_blank')}
+                                            className="inline-flex items-center gap-1 bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors"
+                                          >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                            Ver completa
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
                               {purchase.metadata?.pasajeros && (
                                 <div>
                                   <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
