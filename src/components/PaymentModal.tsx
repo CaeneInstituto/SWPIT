@@ -97,6 +97,14 @@ export default function PaymentModal({ onClose }: Props) {
     if (!dni.trim()) return false
     if (!phone.trim()) return false
     if (boardingPoints.length > 0 && !embarque) return false
+    // Validar que al menos el primer pasajero tenga nombre y DNI
+    if (passengers.length > 0) {
+      const firstPassenger = passengers[0]
+      if (!firstPassenger.nombre.trim() || !firstPassenger.dni.trim()) {
+        return false
+      }
+    }
+    
     return true
   }
 
@@ -492,6 +500,7 @@ export default function PaymentModal({ onClose }: Props) {
                       <li>DNI</li>
                       <li>Teléfono / WhatsApp</li>
                       {boardingPoints.length > 0 && <li>Punto de embarque</li>}
+                      <li>Datos del primer pasajero (Nombre y DNI)</li>
                     </ul>
                   </div>
 
@@ -557,27 +566,57 @@ export default function PaymentModal({ onClose }: Props) {
                       </div>
                     )}
                     <div className="border-t pt-3">
-                      <label className="block text-xs font-semibold text-gray-700 mb-2">Datos de pasajeros</label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Datos de pasajeros <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-xs text-gray-500 mb-3">Al menos debes llenar nombre y DNI del primer pasajero</p>
                       {passengers.map((passenger, index) => (
                         <div key={index} className="bg-gray-50 rounded-lg p-3 mb-2">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-gray-600">Pasajero {index + 1}</span>
+                            <span className="text-xs font-semibold text-gray-600">
+                              Pasajero {index + 1} {index === 0 && <span className="text-red-500">*</span>}
+                            </span>
                             {passengers.length > 1 && (
                               <button type="button" onClick={() => setPassengers(passengers.filter((_, i) => i !== index))}
                                 className="text-red-500 text-xs hover:text-red-700">Eliminar</button>
                             )}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            <input type="text" placeholder="Nombre" value={passenger.nombre}
-                              onChange={e => { const p = [...passengers]; p[index].nombre = e.target.value; setPassengers(p) }}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
-                            <input type="text" placeholder="DNI" value={passenger.dni}
-                              onChange={e => { const p = [...passengers]; p[index].dni = e.target.value; setPassengers(p) }}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
-                            <input type="text" placeholder="Edad" value={passenger.edad}
-                              onChange={e => { const p = [...passengers]; p[index].edad = e.target.value; setPassengers(p) }}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
+                            <div>
+                              <input 
+                                type="text" 
+                                placeholder="Nombre *" 
+                                value={passenger.nombre}
+                                onChange={e => { const p = [...passengers]; p[index].nombre = e.target.value; setPassengers(p) }}
+                                className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
+                                  index === 0 && !passenger.nombre.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <input 
+                                type="text" 
+                                placeholder="DNI *" 
+                                value={passenger.dni}
+                                onChange={e => { const p = [...passengers]; p[index].dni = e.target.value; setPassengers(p) }}
+                                className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
+                                  index === 0 && !passenger.dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <input 
+                                type="text" 
+                                placeholder="Edad" 
+                                value={passenger.edad}
+                                onChange={e => { const p = [...passengers]; p[index].edad = e.target.value; setPassengers(p) }}
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                              />
+                            </div>
                           </div>
+                          {index === 0 && (!passenger.nombre.trim() || !passenger.dni.trim()) && (
+                            <p className="text-xs text-red-500 mt-1">⚠️ Nombre y DNI son obligatorios</p>
+                          )}
                         </div>
                       ))}
                       <button type="button" onClick={() => setPassengers([...passengers, { nombre: '', dni: '', edad: '' }])}
@@ -828,6 +867,7 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
   }
 
   // Abrir Culqi Checkout
+  // Abrir Culqi Checkout
   const openCulqiCheckout = () => {
     if (isProcessing) return // Prevenir doble click
     
@@ -835,11 +875,19 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
       setErrorMsg('Por favor completa todos los campos requeridos')
       return
     }
+    
+    // Validar datos del primer pasajero
+    if (passengers.length > 0) {
+      const firstPassenger = passengers[0]
+      if (!firstPassenger.nombre.trim() || !firstPassenger.dni.trim()) {
+        setErrorMsg('Debes completar al menos el nombre y DNI del primer pasajero')
+        return
+      }
+    }
 
     setIsProcessing(true)
     setStep('processing')
     setErrorMsg('')
-
     // Inicializar Culqi
     initializeCulqi()
 
@@ -969,29 +1017,47 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
           {/* Pasajeros */}
           {totalPersonsFromCart > 0 && (
             <div className="border border-gray-200 rounded-xl p-4">
-              <p className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wider">
-                Datos de pasajeros ({totalPersonsFromCart} persona{totalPersonsFromCart > 1 ? 's' : ''})
+              <p className="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                Datos de pasajeros ({totalPersonsFromCart} persona{totalPersonsFromCart > 1 ? 's' : ''}) <span className="text-red-500">*</span>
               </p>
+              <p className="text-xs text-gray-500 mb-3">Al menos debes llenar nombre y DNI del primer pasajero</p>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {passengers.map((p, i) => (
                   <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-600">Pasajero {i + 1}</p>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Pasajero {i + 1} {i === 0 && <span className="text-red-500">*</span>}
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="text" placeholder="Nombre" value={p.nombre}
+                      <input 
+                        type="text" 
+                        placeholder="Nombre *" 
+                        value={p.nombre}
                         onChange={e => {
                           const updated = [...passengers]
                           updated[i].nombre = e.target.value
                           setPassengers(updated)
                         }}
-                        className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"/>
-                      <input type="text" placeholder="DNI" value={p.dni}
+                        className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
+                          i === 0 && !p.nombre.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="DNI *" 
+                        value={p.dni}
                         onChange={e => {
                           const updated = [...passengers]
                           updated[i].dni = e.target.value
                           setPassengers(updated)
                         }}
-                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"/>
+                        className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
+                          i === 0 && !p.dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
                     </div>
+                    {i === 0 && (!p.nombre.trim() || !p.dni.trim()) && (
+                      <p className="text-xs text-red-500">⚠️ Nombre y DNI son obligatorios</p>
+                    )}
                   </div>
                 ))}
               </div>
