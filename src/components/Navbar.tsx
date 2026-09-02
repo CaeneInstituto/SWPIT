@@ -64,7 +64,7 @@ export default function Navbar() {
             to="/contactanos"
             className="bg-brand-gradient text-white text-sm font-semibold px-5 py-2 rounded-full hover:opacity-90 transition-opacity shadow-md"
           >
-            Reservar ahora
+            Contáctanos
           </Link>
         </div>
 
@@ -129,7 +129,7 @@ export default function Navbar() {
                 className="inline-block bg-brand-gradient text-white text-sm font-semibold px-5 py-2 rounded-full"
                 onClick={() => setOpen(false)}
               >
-                Reservar ahora
+                Contáctanos
               </Link>
             </li>
           </ul>
