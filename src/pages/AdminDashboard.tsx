@@ -1383,8 +1383,13 @@ export default function AdminDashboard() {
       {showAddForm && (
         <TourFormModal
           onClose={() => setShowAddForm(false)}
-          onSave={(newTour) => {
-            saveTours([...tourList, newTour])
+          onSave={async (newTour) => {
+            await saveTours([...tourList, newTour])
+            // Recargar la lista después de guardar
+            const updatedTours = await fetchTours()
+            if (updatedTours.length > 0) {
+              setTourList(updatedTours)
+            }
             setShowAddForm(false)
           }}
         />
@@ -1394,11 +1399,16 @@ export default function AdminDashboard() {
         <TourFormModal
           tour={editingTour}
           onClose={() => setEditingTour(null)}
-          onSave={(updatedTour) => {
+          onSave={async (updatedTour) => {
             const updatedTours = tourList.map(t =>
               t.id === updatedTour.id ? updatedTour : t
             )
-            saveTours(updatedTours)
+            await saveTours(updatedTours)
+            // Recargar la lista después de guardar
+            const refreshedTours = await fetchTours()
+            if (refreshedTours.length > 0) {
+              setTourList(refreshedTours)
+            }
             setEditingTour(null)
           }}
         />
