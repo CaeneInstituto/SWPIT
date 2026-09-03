@@ -251,7 +251,8 @@ async function saveTourToAPI(tour: Tour): Promise<boolean> {
     }
   } catch (error) {
     console.error('❌ Network/fetch error:', error)
-    alert(`❌ Network error: ${error.message}`)
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    alert(`❌ Network error: ${errorMessage}`)
     return false
   }
 }
