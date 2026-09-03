@@ -1783,20 +1783,26 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
   // Helpers para arrays
   const addToArray = (field: keyof Tour, value: string) => {
     if (!value.trim()) return
-    const currentArray = (formData[field] as string[]) || []
-    setFormData({ ...formData, [field]: [...currentArray, value.trim()] })
+    setFormData(prev => {
+      const currentArray = (prev[field] as string[]) || []
+      return { ...prev, [field]: [...currentArray, value.trim()] }
+    })
   }
 
   const removeFromArray = (field: keyof Tour, index: number) => {
-    const currentArray = (formData[field] as string[]) || []
-    setFormData({ ...formData, [field]: currentArray.filter((_, i) => i !== index) })
+    setFormData(prev => {
+      const currentArray = (prev[field] as string[]) || []
+      return { ...prev, [field]: currentArray.filter((_, i) => i !== index) }
+    })
   }
 
   const updateArrayItem = (field: keyof Tour, index: number, value: string) => {
-    const currentArray = (formData[field] as string[]) || []
-    const updated = [...currentArray]
-    updated[index] = value
-    setFormData({ ...formData, [field]: updated })
+    setFormData(prev => {
+      const currentArray = (prev[field] as string[]) || []
+      const updated = [...currentArray]
+      updated[index] = value
+      return { ...prev, [field]: updated }
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -2746,58 +2752,66 @@ function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
   const [editingDay, setEditingDay] = useState<number | null>(null)
 
   const addDay = () => {
-    const currentItinerary = formData.itinerary || []
-    const newDay: DayItinerary = {
-      day: currentItinerary.length + 1,
-      title: '',
-      summary: '',
-      activities: []
-    }
-    setFormData({
-      ...formData,
-      itinerary: [...currentItinerary, newDay]
+    setFormData(prev => {
+      const currentItinerary = prev.itinerary || []
+      const newDay: DayItinerary = {
+        day: currentItinerary.length + 1,
+        title: '',
+        summary: '',
+        activities: []
+      }
+      setEditingDay(currentItinerary.length)
+      return { ...prev, itinerary: [...currentItinerary, newDay] }
     })
-    setEditingDay(currentItinerary.length)
   }
 
   const removeDay = (index: number) => {
-    const updated = (formData.itinerary || []).filter((_, i) => i !== index)
-    // Renumerar días
-    const renumbered = updated.map((day, i) => ({ ...day, day: i + 1 }))
-    setFormData({ ...formData, itinerary: renumbered })
+    setFormData(prev => {
+      const updated = (prev.itinerary || []).filter((_, i) => i !== index)
+      const renumbered = updated.map((day, i) => ({ ...day, day: i + 1 }))
+      return { ...prev, itinerary: renumbered }
+    })
     if (editingDay === index) setEditingDay(null)
   }
 
   const updateDay = (index: number, field: keyof DayItinerary, value: any) => {
-    const updated = [...(formData.itinerary || [])]
-    updated[index] = { ...updated[index], [field]: value }
-    setFormData({ ...formData, itinerary: updated })
+    setFormData(prev => {
+      const updated = [...(prev.itinerary || [])]
+      updated[index] = { ...updated[index], [field]: value }
+      return { ...prev, itinerary: updated }
+    })
   }
 
   const addActivity = (dayIndex: number) => {
-    const updated = [...(formData.itinerary || [])]
-    updated[dayIndex].activities.push({
-      time: '',
-      description: '',
-      icon: 'default'
+    setFormData(prev => {
+      const updated = [...(prev.itinerary || [])]
+      updated[dayIndex].activities.push({
+        time: '',
+        description: '',
+        icon: 'default'
+      })
+      return { ...prev, itinerary: updated }
     })
-    setFormData({ ...formData, itinerary: updated })
   }
 
   const updateActivity = (dayIndex: number, actIndex: number, field: keyof Activity, value: any) => {
-    const updated = [...(formData.itinerary || [])]
-    const currentActivity = updated[dayIndex].activities[actIndex]
-    updated[dayIndex].activities[actIndex] = {
-      ...currentActivity,
-      [field]: value
-    }
-    setFormData({ ...formData, itinerary: updated })
+    setFormData(prev => {
+      const updated = [...(prev.itinerary || [])]
+      const currentActivity = updated[dayIndex].activities[actIndex]
+      updated[dayIndex].activities[actIndex] = {
+        ...currentActivity,
+        [field]: value
+      }
+      return { ...prev, itinerary: updated }
+    })
   }
 
   const removeActivity = (dayIndex: number, actIndex: number) => {
-    const updated = [...(formData.itinerary || [])]
-    updated[dayIndex].activities = updated[dayIndex].activities.filter((_, i) => i !== actIndex)
-    setFormData({ ...formData, itinerary: updated })
+    setFormData(prev => {
+      const updated = [...(prev.itinerary || [])]
+      updated[dayIndex].activities = updated[dayIndex].activities.filter((_, i) => i !== actIndex)
+      return { ...prev, itinerary: updated }
+    })
   }
 
   return (
