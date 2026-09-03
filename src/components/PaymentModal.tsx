@@ -24,7 +24,7 @@ const PAYMENT_INFO = {
 }
 
 type PaymentMethod = 'yape' | 'plin' | 'transfer' | 'card'
-type ModalStep     = 'method' | 'yape-validation' | 'instructions' | 'confirm' | 'passengers'
+type ModalStep     = 'method' | 'yape-validation' | 'instructions' | 'confirm' | 'success' | 'passengers'
 
 interface Props { onClose: () => void }
 
@@ -311,9 +311,9 @@ export default function PaymentModal({ onClose }: Props) {
     message += `🕒 *Fecha de solicitud:* ${new Date().toLocaleString('es-PE')}\n\n`
     message += `Por favor confirmen disponibilidad y envíen datos para el ${methodLabels[method].toLowerCase()}. ¡Gracias! 🙏✨`
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
-    clearCart()
-    setCartOpen(false)
-    onClose()
+    
+    // Ir a pantalla de éxito en lugar de cerrar directamente
+    setStep('success')
   }
 
   const tourNames = items.map(i => i.tourName)
@@ -338,11 +338,11 @@ export default function PaymentModal({ onClose }: Props) {
 
         {/* Step tabs */}
         <div className="flex border-b">
-          {(['method', 'instructions', 'confirm'] as ModalStep[]).map((s, i) => (
+          {(['method', 'instructions', 'success'] as ModalStep[]).map((s, i) => (
             <div key={s} className={`flex-1 py-2 text-center text-xs font-semibold transition-colors ${
               step === s ? 'text-brand-teal border-b-2 border-brand-teal' : 'text-gray-400'
             }`}>
-              {i + 1}. {s === 'method' ? 'Método' : s === 'instructions' ? 'Pagar' : 'Confirmar'}
+              {i + 1}. {s === 'method' ? 'Método' : s === 'instructions' ? 'Pagar' : s === 'success' ? 'Éxito' : 'Confirmar'}
             </div>
           ))}
         </div>
@@ -1063,6 +1063,65 @@ export default function PaymentModal({ onClose }: Props) {
                   </p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* STEP 4 - Success (métodos manuales) */}
+          {step === 'success' && (
+            <div className="space-y-4">
+              {/* Éxito */}
+              <div className="text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <p className="text-2xl font-extrabold text-gray-900">¡Solicitud enviada!</p>
+                <p className="text-brand-teal font-bold text-lg mt-1">Método: {methodLabels[method]}</p>
+                <p className="text-sm text-gray-500 mt-1">WhatsApp enviado correctamente</p>
+              </div>
+
+              {/* Resumen básico */}
+              <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3">
+                <p className="text-xs font-bold text-teal-800 mb-2">📋 RESUMEN DE SOLICITUD:</p>
+                <div className="text-xs text-teal-700 space-y-1">
+                  <p><strong>Cliente:</strong> {name}</p>
+                  <p><strong>Método:</strong> {methodLabels[method]}</p>
+                  <p><strong>Monto:</strong> S/ {totalPrice.toFixed(2)}</p>
+                  <p><strong>Tours:</strong> {items.length} paquete{items.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+
+              {/* Mensaje de instrucciones */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-800 mb-1">📱 Próximos pasos</p>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      Acabamos de enviarle su solicitud por <strong>WhatsApp a nuestro equipo</strong>. Nuestros asesores verificarán la disponibilidad y le enviarán los datos de pago para confirmar su reserva.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón volver al inicio */}
+              <button
+                onClick={() => { clearCart(); setCartOpen(false); onClose() }}
+                className="w-full bg-brand-teal hover:bg-brand-teal-d text-white font-bold py-3 rounded-xl transition-colors"
+              >
+                Volver al inicio
+              </button>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
+                <p className="text-xs text-gray-600">
+                  💡 <strong>WhatsApp:</strong> +51 929 648 380 • Responderemos a la brevedad
+                </p>
+              </div>
             </div>
           )}
 
