@@ -664,6 +664,23 @@ export default function PaymentModal({ onClose }: Props) {
                     ))}
                   </div>
 
+                  {/* Mensaje de instrucciones */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-800 mb-1">📄 Importante</p>
+                        <p className="text-xs text-amber-700 leading-relaxed">
+                          Guarde el voucher y envíenos el resumen del pago haciendo clic en el botón de <strong>enviar resumen a WhatsApp</strong> para estar atentos a su compra y coordinar los detalles de su viaje.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Botones */}
                   <div className="space-y-3">
                     {/* Descargar PDF */}
