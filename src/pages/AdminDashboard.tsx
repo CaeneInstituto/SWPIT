@@ -1740,6 +1740,8 @@ function SeasonCard({ name, icon, color, description, discount, isActive, onAppl
 
 function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
   const [activeFormTab, setActiveFormTab] = useState<'basic' | 'details' | 'itinerary' | 'media'>('basic')
+  const [coverImageTab, setCoverImageTab] = useState<'url' | 'upload' | 'drive'>('url')
+  const [coverImagePreview, setCoverImagePreview] = useState<string>('')
   
   const [formData, setFormData] = useState<Partial<Tour>>(() => {
     if (tour) {
@@ -1881,7 +1883,14 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
           
           {/* TAB: BASIC INFO */}
           {activeFormTab === 'basic' && (
-            <BasicInfoForm formData={formData} setFormData={setFormData} />
+            <BasicInfoForm 
+              formData={formData} 
+              setFormData={setFormData}
+              coverImageTab={coverImageTab}
+              setCoverImageTab={setCoverImageTab}
+              coverImagePreview={coverImagePreview}
+              setCoverImagePreview={setCoverImagePreview}
+            />
           )}
 
           {/* TAB: ADVANCED DETAILS */}
@@ -1938,10 +1947,14 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
 
 interface BasicInfoFormProps {
   formData: Partial<Tour>
-  setFormData: (data: Partial<Tour>) => void
+  setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
+  coverImageTab: 'url' | 'upload' | 'drive'
+  setCoverImageTab: (tab: 'url' | 'upload' | 'drive') => void
+  coverImagePreview: string
+  setCoverImagePreview: (v: string) => void
 }
 
-function BasicInfoForm({ formData, setFormData }: BasicInfoFormProps) {
+function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab, coverImagePreview, setCoverImagePreview }: BasicInfoFormProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div className="sm:col-span-2">
@@ -1976,18 +1989,14 @@ function BasicInfoForm({ formData, setFormData }: BasicInfoFormProps) {
         <label className="block text-sm font-semibold text-gray-700 mb-2">
           Región *
         </label>
-        <select
+        <input
+          type="text"
           required
           value={formData.region}
           onChange={(e) => setFormData({ ...formData, region: e.target.value })}
           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-        >
-          <option value="Lima">Lima</option>
-          <option value="Ica">Ica</option>
-          <option value="Ayacucho">Ayacucho</option>
-          <option value="Junín / Pasco">Junín / Pasco</option>
-          <option value="Cusco">Cusco</option>
-        </select>
+          placeholder="Ej: Lima, Ica, Cusco, Junín, etc."
+        />
       </div>
 
       <div>
@@ -2055,16 +2064,139 @@ function BasicInfoForm({ formData, setFormData }: BasicInfoFormProps) {
 
       <div className="sm:col-span-2">
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          URL de la imagen principal *
+          Imagen principal *
         </label>
-        <input
-          type="text"
-          required
-          value={formData.image}
-          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-          placeholder="/ruta/a/imagen.jpg"
-        />
+
+        {/* Tabs de método */}
+        <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-lg w-fit">
+          {(['url', 'upload', 'drive'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setCoverImageTab(tab)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                coverImageTab === tab
+                  ? 'bg-white shadow text-brand-teal'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab === 'url' ? '🔗 URL' : tab === 'upload' ? '📁 Archivo' : '📂 Drive'}
+            </button>
+          ))}
+        </div>
+
+        {/* URL directa */}
+        {coverImageTab === 'url' && (
+          <input
+            type="text"
+            value={formData.image}
+            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+            placeholder="https://ejemplo.com/imagen.jpg  ó  /public/carpeta/imagen.jpg"
+          />
+        )}
+
+        {/* Subir archivo local */}
+        {coverImageTab === 'upload' && (
+          <div className="space-y-2">
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-teal transition-colors cursor-pointer"
+              onClick={() => document.getElementById('cover-image-upload')?.click()}
+            >
+              <input
+                id="cover-image-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  if (!file.type.startsWith('image/')) {
+                    alert('Solo se permiten imágenes')
+                    return
+                  }
+                  if (file.size > 2 * 1024 * 1024) {
+                    alert(`Archivo muy grande (${(file.size/1024/1024).toFixed(2)}MB). Máximo 2MB.`)
+                    return
+                  }
+                  const reader = new FileReader()
+                  reader.onload = (ev) => {
+                    setFormData(prev => ({ ...prev, image: ev.target?.result as string }))
+                    setCoverImagePreview(ev.target?.result as string)
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+              {coverImagePreview || formData.image?.startsWith('data:') ? (
+                <div className="space-y-2">
+                  <img
+                    src={coverImagePreview || formData.image}
+                    alt="Preview portada"
+                    className="max-h-32 mx-auto rounded-lg object-contain"
+                  />
+                  <p className="text-xs text-green-600 font-semibold">✓ Imagen cargada — click para cambiar</p>
+                </div>
+              ) : (
+                <div className="py-4">
+                  <svg className="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-600 font-medium">Click para subir imagen</p>
+                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG (máx. 2MB)</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* URL de Google Drive */}
+        {coverImageTab === 'drive' && (
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Pega el enlace de Google Drive aquí..."
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+              onChange={(e) => {
+                const raw = e.target.value.trim()
+                // Convertir link de Drive a link directo de imagen
+                const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)
+                if (match) {
+                  const id = match[1]
+                  const direct = `https://drive.google.com/uc?export=view&id=${id}`
+                  setFormData(prev => ({ ...prev, image: direct }))
+                } else if (raw.startsWith('http')) {
+                  setFormData(prev => ({ ...prev, image: raw }))
+                }
+              }}
+            />
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
+              <p className="font-semibold">💡 ¿Cómo usar Google Drive?</p>
+              <ol className="list-decimal list-inside space-y-0.5">
+                <li>Sube tu imagen a Google Drive</li>
+                <li>Click derecho → "Obtener enlace"</li>
+                <li>Cambia acceso a <strong>"Cualquier persona con el enlace"</strong></li>
+                <li>Copia y pega el enlace aquí</li>
+              </ol>
+            </div>
+            {formData.image?.includes('drive.google.com') && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-700">
+                ✓ URL de Drive detectada: <span className="font-mono break-all">{formData.image}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Preview de imagen actual (para URL y Drive) */}
+        {(coverImageTab === 'url' || coverImageTab === 'drive') && formData.image && !formData.image.startsWith('data:') && (
+          <div className="mt-2">
+            <img
+              src={formData.image}
+              alt="Preview"
+              className="h-20 w-auto rounded-lg object-cover border border-gray-200"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -2148,7 +2280,7 @@ function BasicInfoForm({ formData, setFormData }: BasicInfoFormProps) {
 
 interface AdvancedDetailsFormProps {
   formData: Partial<Tour>
-  setFormData: (data: Partial<Tour>) => void
+  setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
   addToArray: (field: keyof Tour, value: string) => void
   removeFromArray: (field: keyof Tour, index: number) => void
   updateArrayItem: (field: keyof Tour, index: number, value: string) => void
@@ -2607,7 +2739,7 @@ function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArra
 
 interface ItineraryFormProps {
   formData: Partial<Tour>
-  setFormData: (data: Partial<Tour>) => void
+  setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
 }
 
 function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
@@ -2645,7 +2777,7 @@ function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
   const addActivity = (dayIndex: number) => {
     const updated = [...(formData.itinerary || [])]
     updated[dayIndex].activities.push({
-      time: '08:00',
+      time: '',
       description: '',
       icon: 'default'
     })
@@ -2775,12 +2907,15 @@ function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
                   <div className="space-y-2">
                     {day.activities.map((act, actIndex) => (
                       <div key={actIndex} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg">
-                        <input
-                          type="time"
-                          value={act.time || '08:00'}
-                          onChange={(e) => updateActivity(dayIndex, actIndex, 'time', e.target.value)}
-                          className="w-24 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
-                        />
+                        <div className="flex flex-col gap-0.5">
+                          <input
+                            type="time"
+                            value={act.time || ''}
+                            onChange={(e) => updateActivity(dayIndex, actIndex, 'time', e.target.value)}
+                            className="w-24 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                          />
+                          <span className="text-[10px] text-gray-400 text-center">opcional</span>
+                        </div>
                         <select
                           value={act.icon || 'default'}
                           onChange={(e) => updateActivity(dayIndex, actIndex, 'icon', e.target.value)}
@@ -2863,7 +2998,7 @@ const IMAGE_FOLDERS = [
 
 interface ImageFolderBrowserProps {
   formData: Partial<Tour>
-  setFormData: (data: Partial<Tour>) => void
+  setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
 }
 
 function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) {
@@ -2945,29 +3080,24 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
   }
 
   const setAsCoverImage = (imagePath: string) => {
-    setFormData({ ...formData, image: imagePath })
+    setFormData(prev => ({ ...prev, image: imagePath }))
   }
 
   const addToGallery = (imagePath: string) => {
-    const currentImages = formData.images || []
-    if (!currentImages.includes(imagePath)) {
-      setFormData({
-        ...formData,
-        images: [...currentImages, imagePath]
-      })
-    }
+    setFormData(prev => {
+      const currentImages = prev.images || []
+      if (!currentImages.includes(imagePath)) {
+        return { ...prev, images: [...currentImages, imagePath] }
+      }
+      return prev
+    })
   }
 
   const quickAddAllToGallery = () => {
-    const validImages = availableImages.filter(img => {
-      // Solo agregar imágenes que probablemente existan
-      return true
-    })
-    const currentImages = formData.images || []
-    const newImages = validImages.filter(img => !currentImages.includes(img))
-    setFormData({
-      ...formData,
-      images: [...currentImages, ...newImages]
+    setFormData(prev => {
+      const currentImages = prev.images || []
+      const newImages = availableImages.filter(img => !currentImages.includes(img))
+      return { ...prev, images: [...currentImages, ...newImages] }
     })
   }
 
@@ -3145,7 +3275,7 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
 
 interface MediaFormProps {
   formData: Partial<Tour>
-  setFormData: (data: Partial<Tour>) => void
+  setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
 }
 
 function MediaForm({ formData, setFormData }: MediaFormProps) {
@@ -3156,28 +3286,28 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
   const addImage = () => {
     if (!newImageUrl.trim()) return
     const currentImages = formData.images || []
-    setFormData({
-      ...formData,
-      images: [...currentImages, newImageUrl.trim()]
-    })
+    setFormData(prev => ({
+      ...prev,
+      images: [...(prev.images || []), newImageUrl.trim()]
+    }))
     setNewImageUrl('')
   }
 
   const removeImage = (index: number) => {
-    const currentImages = formData.images || []
-    setFormData({
-      ...formData,
-      images: currentImages.filter((_, i) => i !== index)
-    })
+    setFormData(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }))
   }
 
   const updateImage = (index: number, value: string) => {
     const currentImages = formData.images || []
     const updated = [...currentImages]
     updated[index] = value
-    setFormData({
-      ...formData,
-      images: updated
+    setFormData(prev => {
+      const updated = [...(prev.images || [])]
+      updated[index] = value
+      return { ...prev, images: updated }
     })
   }
 
@@ -3207,10 +3337,9 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
           setFormData({ ...formData, brochure: base64 })
           setUploadProgress(`✅ PDF cargado: ${file.name}`)
         } else {
-          const currentImages = formData.images || []
-          setFormData({
-            ...formData,
-            images: [...currentImages, base64]
+          setFormData(prev => {
+            const currentImages = prev.images || []
+            return { ...prev, images: [...currentImages, base64] }
           })
           setUploadProgress(`✅ Imagen agregada: ${file.name}`)
         }
@@ -3261,12 +3390,11 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
 
       if (data.secure_url) {
         if (type === 'pdf') {
-          setFormData({ ...formData, brochure: data.secure_url })
+          setFormData(prev => ({ ...prev, brochure: data.secure_url }))
         } else {
-          const currentImages = formData.images || []
-          setFormData({
-            ...formData,
-            images: [...currentImages, data.secure_url]
+          setFormData(prev => {
+            const currentImages = prev.images || []
+            return { ...prev, images: [...currentImages, data.secure_url] }
           })
         }
         setUploadProgress(`✅ Archivo subido exitosamente`)

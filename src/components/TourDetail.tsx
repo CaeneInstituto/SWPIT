@@ -136,7 +136,7 @@ function AccordionDay({ day, isOpen, onToggle }: {
                   {activityIconMap[act.icon ?? 'default']}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-bold text-brand-teal mr-2">{formatToTime12(act.time)}</span>
+                  {act.time && <span className="text-xs font-bold text-brand-teal mr-2">{formatToTime12(act.time)}</span>}
                   <span className="text-sm text-gray-700">{act.description}</span>
                 </div>
               </li>

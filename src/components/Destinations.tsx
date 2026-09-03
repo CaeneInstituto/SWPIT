@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { tours } from '../data/tours'
 import AddToCartButton from './AddToCartButton'
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 
 // API URL
 const API_URL = (import.meta as any).env?.VITE_API_URL || ''
@@ -22,7 +21,6 @@ const tagColors: Record<string, string> = {
   '2D/1N':       'bg-violet-500 text-white',
 }
 
-const REGIONS = ['Todos', 'Lima', 'Ica', 'Ayacucho', 'Junín / Pasco']
 const DURATIONS = ['Todos', 'Full Day', '2 Días / 1 Noche', '3 Días / 2 Noches', '4 Días / 3 Noches']
 
 export default function Destinations() {
@@ -35,7 +33,22 @@ export default function Destinations() {
   const [tourList, setTourList] = useState<typeof tours>([])
   const [loading, setLoading] = useState(true)
 
-  React.useEffect(() => {
+  // Obtener regiones dinámicamente de los tours
+  const REGIONS = useMemo(() => {
+    const uniqueRegions = new Set(['Todos'])
+    tourList.forEach(tour => {
+      if (tour.region && tour.region.trim()) {
+        uniqueRegions.add(tour.region.trim())
+      }
+    })
+    return Array.from(uniqueRegions).sort((a, b) => {
+      if (a === 'Todos') return -1
+      if (b === 'Todos') return 1
+      return a.localeCompare(b)
+    })
+  }, [tourList])
+
+  useEffect(() => {
     console.log('===== Destinations Component Loading =====')
     
     async function loadTours() {
