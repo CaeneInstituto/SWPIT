@@ -72,7 +72,7 @@ export default function PaymentModal({ onClose }: Props) {
     }
     
     if (!yapeScreenshot) {
-      alert('Por favor sube la captura de pantalla de tu comprobante Yape')
+      alert('📱 Por favor sube la captura de pantalla de tu comprobante Yape para continuar')
       return false
     }
     
@@ -431,9 +431,21 @@ export default function PaymentModal({ onClose }: Props) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Sube la captura de tu comprobante Yape *
-                  </label>
+                  <div className="mb-2 bg-purple-50 border border-purple-200 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 bg-[#6C1DDB] rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/>
+                        </svg>
+                      </div>
+                      <label className="text-sm font-bold text-purple-800">
+                        📸 Sube tu comprobante Yape *
+                      </label>
+                    </div>
+                    <p className="text-xs text-purple-700 ml-8">
+                      <strong>Importante:</strong> Debe mostrar el monto y destino del pago
+                    </p>
+                  </div>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#6C1DDB] transition-colors">
                     <input
                       type="file"
@@ -475,9 +487,18 @@ export default function PaymentModal({ onClose }: Props) {
                       )}
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Toma captura de pantalla de tu comprobante Yape mostrando el monto y destino
-                  </p>
+                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3 h-3 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                      <p className="text-xs text-amber-700 font-medium">
+                        📱 <strong>¡Importante!</strong> La captura debe mostrar claramente el <strong>monto enviado</strong> y el <strong>número de destino</strong> para validar tu pago.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -819,13 +840,19 @@ export default function PaymentModal({ onClose }: Props) {
               ) : (
                 /* ── Otros métodos: formulario de confirmación normal ── */
                 <>
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                    <svg className="w-10 h-10 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p className="text-green-800 font-semibold text-sm">
-                      ¡Casi listo! Envíanos el comprobante por WhatsApp para confirmar tu reserva.
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 text-center text-white shadow-lg">
+                    <div className="flex items-center justify-center mb-2">
+                      <svg className="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <span className="text-lg font-bold">¡Casi listo!</span>
+                    </div>
+                    <p className="font-semibold text-sm leading-relaxed">
+                      📱 <strong>Envíanos el comprobante por WhatsApp</strong> para confirmar tu reserva
                     </p>
+                    <div className="mt-2 bg-white/20 rounded-lg px-3 py-1.5 inline-block">
+                      <p className="text-xs font-medium">🚀 Respuesta rápida garantizada</p>
+                    </div>
                   </div>
                   
                   {/* Alerta de campos obligatorios */}
