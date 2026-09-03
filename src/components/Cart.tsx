@@ -27,7 +27,7 @@ export default function Cart() {
       message += `${index + 1}. *${item.tourName}*\n`
       message += `   Opción: ${item.priceOption}\n`
       message += `   Personas: ${item.totalPersons || (item.personsPerPackage > 0 ? (item.quantity * item.personsPerPackage) : 1)}\n`
-      message += `   Fecha: ${item.travelDate}\n`
+      message += `   Fecha de partida: ${item.travelDate}\n`
       const itemTotal = item.customTotalPrice || (item.priceValue * item.quantity)
       message += `   Subtotal: S/ ${itemTotal.toFixed(2)}\n\n`
     })
@@ -108,7 +108,7 @@ export default function Cart() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">{item.tourName}</h3>
                     <p className="text-xs text-gray-600 mb-1">{item.priceOption}</p>
-                    <p className="text-xs text-gray-500">📅 {item.travelDate}</p>
+                    <p className="text-xs text-gray-500">🚌 Partida: {item.travelDate}</p>
                     <p className="text-xs text-purple-600 mt-1">
                       👥 {item.totalPersons || (item.personsPerPackage > 0 ? (item.personsPerPackage * item.quantity) : 1)} {(item.totalPersons || (item.personsPerPackage > 0 ? (item.personsPerPackage * item.quantity) : 1)) === 1 ? 'persona' : 'personas'} total
                     </p>

@@ -518,7 +518,7 @@ export default function AdminDashboard() {
           'Estado': purchase.status || 'desconocido',
           'Método de Pago': purchase.paymentMethod || 'Tarjeta',
           'Tour/Paquete': purchase.description || '',
-          'Fecha de Viaje': purchase.metadata?.fechaViaje || 'N/A',
+          'Fecha de Partida': purchase.metadata?.fechaViaje || 'N/A',
           'Cantidad Personas': purchase.metadata?.totalPersonas || 0,
           'Pasajeros (Nombre/DNI/Edad)': pasajerosTexto || 'N/A',
           'Punto de Embarque': purchase.metadata?.puntoEmbarque || 'N/A',
@@ -1104,7 +1104,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">
                       <div className="col-span-2">Cliente / Contacto</div>
                       <div className="col-span-2">Paquete / Tour</div>
-                      <div className="col-span-1">Fecha Viaje</div>
+                      <div className="col-span-1">Fecha Partida</div>
                       <div className="col-span-1">Personas</div>
                       <div className="col-span-2">Embarque</div>
                       <div className="col-span-1 text-center">Monto</div>
@@ -1154,7 +1154,7 @@ export default function AdminDashboard() {
                             )}
                           </div>
 
-                          {/* Fecha Viaje */}
+                          {/* Fecha Partida */}
                           <div className="col-span-1">
                             <div className="text-xs text-gray-700 font-medium">
                               {purchase.metadata?.fechaViaje || 'N/A'}

@@ -355,7 +355,7 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
 
   const handleAddToCart = () => {
     if (!travelDate) {
-      alert('Por favor selecciona una fecha de viaje')
+      alert('Por favor selecciona una fecha de partida')
       return
     }
 
@@ -1036,7 +1036,7 @@ function DynamicCartModal({
             {/* Travel Date */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Fecha de viaje
+                Fecha de partida
               </label>
               <TourDatePicker
                 tour={tour}

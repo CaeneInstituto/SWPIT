@@ -281,7 +281,7 @@ export default function PaymentModal({ onClose }: Props) {
     items.forEach((item, i) => {
       message += `${i + 1}. ${item.tourName}\n`
       message += `   📦 Opción: ${item.priceOption}\n`
-      message += `   📅 Fecha: ${item.travelDate}\n`
+      message += `   📅 Fecha de partida: ${item.travelDate}\n`
       message += `   👥 Personas: ${item.quantity} x ${item.personsPerPackage > 0 ? item.personsPerPackage : 1} = ${item.quantity * (item.personsPerPackage > 0 ? item.personsPerPackage : 1)} persona(s)\n`
       message += `   💵 Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
@@ -699,7 +699,7 @@ export default function PaymentModal({ onClose }: Props) {
                           doc.setFont('helvetica','bold'); doc.text(`${idx+1}. ${item.tourName}`, 20, y); y += 6
                           doc.setFont('helvetica','normal')
                           doc.text(`   Opción: ${item.priceOption}`, 25, y); y += 5
-                          doc.text(`   Personas: ${item.quantity}  |  Fecha: ${item.travelDate}`, 25, y); y += 5
+                          doc.text(`   Personas: ${item.quantity}  |  Partida: ${item.travelDate}`, 25, y); y += 5
                           doc.text(`   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}`, 25, y); y += 8
                         })
                         
@@ -752,7 +752,7 @@ export default function PaymentModal({ onClose }: Props) {
                           items.map((it, i) =>
                             `${i+1}. ${it.tourName}\n` +
                             `   📦 Opción: ${it.priceOption}\n` +
-                            `   📅 Fecha: ${it.travelDate}\n` +
+                            `   📅 Fecha de partida: ${it.travelDate}\n` +
                             `   👥 Personas: ${it.quantity} x ${it.personsPerPackage > 0 ? it.personsPerPackage : 1} = ${it.quantity * (it.personsPerPackage > 0 ? it.personsPerPackage : 1)} persona(s)\n` +
                             `   💵 Subtotal: S/ ${(it.priceValue * it.quantity).toFixed(2)}`
                           ).join('\n\n') +
