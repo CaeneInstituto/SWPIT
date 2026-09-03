@@ -134,12 +134,9 @@ export default function PaymentModal({ onClose }: Props) {
     chargeId: string
     email: string
     holderName: string
-    phone: string
-    dni: string
-    embarque: string
     habitacion: string
     comentario: string
-    passengers: Array<{ nombre: string; dni: string; edad: string }>
+    passengers: Array<{ nombre: string; dni: string; edad: string; telefono: string; embarque: string }>
     amount: string
   } | null>(null)
   
@@ -166,13 +163,21 @@ export default function PaymentModal({ onClose }: Props) {
   // Inicializar pasajeros según la cantidad del carrito
   const initializePassengers = () => {
     const passengerCount = Math.max(1, totalPersonsFromCart || 0)
-    return Array.from({ length: passengerCount }, () => ({ nombre: '', dni: '', edad: '' }))
+    return Array.from({ length: passengerCount }, () => ({ 
+      nombre: '', 
+      dni: '', 
+      edad: '', 
+      telefono: '', 
+      embarque: '' 
+    }))
   }
   
   const [passengers, setPassengers] = useState<Array<{
     nombre: string
     dni: string
     edad: string
+    telefono: string
+    embarque: string
   }>>(initializePassengers())
 
   const methodLabels: Record<PaymentMethod, string> = {
@@ -184,17 +189,20 @@ export default function PaymentModal({ onClose }: Props) {
 
   // Validar campos obligatorios
   const isFormValid = () => {
+    // Nombre del comprador obligatorio
     if (!name.trim()) return false
-    if (!dni.trim()) return false
-    if (!phone.trim()) return false
-    if (boardingPoints.length > 0 && !embarque) return false
-    // Validar que al menos el primer pasajero tenga nombre y DNI
+    
+    // Al menos el primer pasajero debe tener nombre y DNI
     if (passengers.length > 0) {
       const firstPassenger = passengers[0]
       if (!firstPassenger.nombre.trim() || !firstPassenger.dni.trim()) {
         return false
       }
     }
+    
+    // Al menos un pasajero debe tener teléfono
+    const hasPhone = passengers.some(p => p.telefono.trim())
+    if (!hasPhone) return false
     
     return true
   }
@@ -223,8 +231,6 @@ export default function PaymentModal({ onClose }: Props) {
     const purchaseData = {
       name: name || 'Sin especificar',
       email: method === 'card' ? email : '', // Solo guardar email si es tarjeta
-      phone: phone || '',
-      dni: dni || '',
       method: methodLabels[method],
       tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
       totalPersons: (() => {
@@ -237,10 +243,9 @@ export default function PaymentModal({ onClose }: Props) {
       paymentStatus: 'Pendiente confirmación',
       note: voucherNote || '',
       culqiId: '',
-      embarque: embarque || '',
       habitacion: habitacion || '',
       comentario: comentario || '',
-      passengers: passengers.filter(p => p.nombre || p.dni || p.edad), // Solo pasajeros con datos
+      passengers: passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque), // Solo pasajeros con datos
       // Datos de validación de Yape
       yapePhone: method === 'yape' && yapeValidated ? yapePhone : '',
       yapeScreenshot: method === 'yape' && yapeValidated ? yapeScreenshotBase64 : ''
@@ -262,8 +267,6 @@ export default function PaymentModal({ onClose }: Props) {
     // Construir mensaje de WhatsApp
     let message = `🌄 *Reserva Peru In Travel*\n\n`
     message += `👤 *Cliente:* ${name || '(sin especificar)'}\n`
-    if (dni) message += `🆔 *DNI Cliente:* ${dni}\n`
-    message += `📱 *Teléfono:* ${phone || '(sin especificar)'}\n`
     message += `💳 *Método de pago:* ${methodLabels[method]}\n`
     
     // Agregar datos de validación de Yape si aplica
@@ -285,15 +288,19 @@ export default function PaymentModal({ onClose }: Props) {
     message += `💰 *Total paquete: S/ ${totalPrice.toFixed(2)}*\n`
     message += `💵 *Monto a pagar ahora: S/ ${amountToPay.toFixed(2)}*${isPartialPayment ? ' (50% adelanto)' : ' (pago completo)'}\n`
     if (isPartialPayment) message += `💰 *Saldo pendiente: S/ ${(totalPrice - amountToPay).toFixed(2)}* (se paga antes del viaje)\n`
-    if (embarque) message += `📍 *Punto de embarque:* ${embarque}\n`
     if (habitacion) message += `🛏️ *Habitación:* ${habitacion}\n`
     
     // Agregar datos de pasajeros
-    const pasajerosConDatos = passengers.filter(p => p.nombre || p.dni || p.edad)
+    const pasajerosConDatos = passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque)
     if (pasajerosConDatos.length > 0) {
       message += `\n👥 *Datos de pasajeros:*\n`
       pasajerosConDatos.forEach((p, i) => {
-        message += `${i+1}. ${p.nombre || 'Sin nombre'} (DNI: ${p.dni || 'N/A'}, Edad: ${p.edad || 'N/A'})\n`
+        message += `${i+1}. ${p.nombre || 'Sin nombre'}`
+        if (p.dni) message += ` - DNI: ${p.dni}`
+        if (p.edad) message += ` - Edad: ${p.edad}`
+        message += `\n`
+        if (p.telefono) message += `   📱 Tel: ${p.telefono}\n`
+        if (p.embarque) message += `   📍 Embarque: ${p.embarque}\n`
       })
     }
     
@@ -631,9 +638,19 @@ export default function PaymentModal({ onClose }: Props) {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-1">
                     <p className="text-sm text-blue-800"><strong>📧 Email:</strong> {cardPaymentData.email}</p>
                     <p className="text-sm text-blue-800"><strong>👤 Nombre:</strong> {cardPaymentData.holderName}</p>
-                    {cardPaymentData.dni && <p className="text-sm text-blue-800"><strong>🆔 DNI:</strong> {cardPaymentData.dni}</p>}
-                    {cardPaymentData.phone && <p className="text-sm text-blue-800"><strong>📱 Teléfono:</strong> {cardPaymentData.phone}</p>}
-                    {cardPaymentData.embarque && <p className="text-sm text-blue-800"><strong>📍 Embarque:</strong> {cardPaymentData.embarque}</p>}
+                    {cardPaymentData.habitacion && <p className="text-sm text-blue-800"><strong>🛏️ Habitación:</strong> {cardPaymentData.habitacion}</p>}
+                    {cardPaymentData.passengers.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-blue-300">
+                        <p className="text-xs font-semibold text-blue-900 mb-1">👥 Pasajeros:</p>
+                        {cardPaymentData.passengers.map((p, i) => (
+                          <div key={i} className="text-xs text-blue-700 ml-2 mb-1">
+                            <p>{i+1}. {p.nombre || 'N/A'} {p.dni && `- DNI: ${p.dni}`} {p.edad && `- Edad: ${p.edad}`}</p>
+                            {p.telefono && <p className="ml-2">📱 {p.telefono}</p>}
+                            {p.embarque && <p className="ml-2">📍 {p.embarque}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tours reservados */}
@@ -671,9 +688,6 @@ export default function PaymentModal({ onClose }: Props) {
                         row('ID de Transacción:', cardPaymentData.chargeId)
                         row('Email:', cardPaymentData.email)
                         row('Nombre:', cardPaymentData.holderName)
-                        if (cardPaymentData.dni)      row('DNI:', cardPaymentData.dni)
-                        if (cardPaymentData.phone)    row('Teléfono:', cardPaymentData.phone)
-                        if (cardPaymentData.embarque) row('Embarque:', cardPaymentData.embarque)
                         if (cardPaymentData.habitacion) row('Habitación:', cardPaymentData.habitacion)
                         row('Fecha de pago:', new Date().toLocaleString('es-PE'))
                         y += 4
@@ -688,6 +702,23 @@ export default function PaymentModal({ onClose }: Props) {
                           doc.text(`   Personas: ${item.quantity}  |  Fecha: ${item.travelDate}`, 25, y); y += 5
                           doc.text(`   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}`, 25, y); y += 8
                         })
+                        
+                        // Agregar datos de pasajeros si existen
+                        if (cardPaymentData.passengers.length > 0) {
+                          y += 2
+                          doc.setFont('helvetica','bold'); doc.setTextColor(...teal)
+                          doc.text('Datos de Pasajeros:', 20, y); y += 7
+                          doc.setFont('helvetica','normal'); doc.setTextColor(...gray)
+                          cardPaymentData.passengers.forEach((p, i) => {
+                            doc.text(`${i+1}. ${p.nombre || 'N/A'}`, 25, y); y += 5
+                            if (p.dni) { doc.text(`   DNI: ${p.dni}`, 30, y); y += 5 }
+                            if (p.edad) { doc.text(`   Edad: ${p.edad}`, 30, y); y += 5 }
+                            if (p.telefono) { doc.text(`   Tel: ${p.telefono}`, 30, y); y += 5 }
+                            if (p.embarque) { doc.text(`   Embarque: ${p.embarque}`, 30, y); y += 5 }
+                            y += 2
+                          })
+                        }
+                        
                         y += 4
                         doc.setDrawColor(...teal); doc.line(20, y, 190, y); y += 10
                         doc.setFontSize(15); doc.setFont('helvetica','bold'); doc.setTextColor(...teal)
@@ -714,9 +745,7 @@ export default function PaymentModal({ onClose }: Props) {
                           `🎉 *¡Reserva Confirmada – Peru In Travel!*\n\n` +
                           `📋 *ID Transacción:* ${cardPaymentData.chargeId}\n` +
                           `👤 *Cliente:* ${cardPaymentData.holderName}\n` +
-                          (cardPaymentData.dni ? `🆔 *DNI Cliente:* ${cardPaymentData.dni}\n` : '') +
                           `📧 *Email:* ${cardPaymentData.email}\n` +
-                          (cardPaymentData.phone ? `📱 *Teléfono:* ${cardPaymentData.phone}\n` : '') +
                           `💳 *Total pagado:* S/ ${cardPaymentData.amount}\n` +
                           `💰 *Método:* Tarjeta de crédito (Pago completo 100%)\n\n` +
                           `🎒 *Tours reservados:*\n` +
@@ -727,13 +756,18 @@ export default function PaymentModal({ onClose }: Props) {
                             `   👥 Personas: ${it.quantity} x ${it.personsPerPackage > 0 ? it.personsPerPackage : 1} = ${it.quantity * (it.personsPerPackage > 0 ? it.personsPerPackage : 1)} persona(s)\n` +
                             `   💵 Subtotal: S/ ${(it.priceValue * it.quantity).toFixed(2)}`
                           ).join('\n\n') +
-                          (cardPaymentData.embarque ? `\n\n📍 *Punto de embarque:* ${cardPaymentData.embarque}` : '') +
-                          (cardPaymentData.habitacion ? `\n🛏️ *Habitación:* ${cardPaymentData.habitacion}` : '') +
+                          (cardPaymentData.habitacion ? `\n\n🛏️ *Habitación:* ${cardPaymentData.habitacion}` : '') +
                           (cardPaymentData.passengers && cardPaymentData.passengers.length > 0 ? 
                             `\n\n👥 *Datos de pasajeros:*\n` +
-                            cardPaymentData.passengers.map((p, i) => 
-                              `${i+1}. ${p.nombre || 'Sin nombre'} (DNI: ${p.dni || 'N/A'}, Edad: ${p.edad || 'N/A'})`
-                            ).join('\n')
+                            cardPaymentData.passengers.map((p, i) => {
+                              let line = `${i+1}. ${p.nombre || 'Sin nombre'}`
+                              if (p.dni) line += ` - DNI: ${p.dni}`
+                              if (p.edad) line += ` - Edad: ${p.edad}`
+                              let extras = ''
+                              if (p.telefono) extras += `\n   📱 Tel: ${p.telefono}`
+                              if (p.embarque) extras += `\n   📍 Embarque: ${p.embarque}`
+                              return line + extras
+                            }).join('\n')
                             : '') +
                           (cardPaymentData.comentario ? `\n\n💬 *Comentarios:* ${cardPaymentData.comentario}` : '') +
                           `\n\n✅ *Estado:* CONFIRMADO - Pago procesado exitosamente\n` +
@@ -781,11 +815,9 @@ export default function PaymentModal({ onClose }: Props) {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
                     <p className="font-semibold mb-1">📋 Datos requeridos para confirmar:</p>
                     <ul className="text-xs space-y-0.5 ml-4 list-disc">
-                      <li>Nombre completo</li>
-                      <li>DNI</li>
-                      <li>Teléfono / WhatsApp</li>
-                      {boardingPoints.length > 0 && <li>Punto de embarque</li>}
+                      <li>Nombre del comprador</li>
                       <li>Datos del primer pasajero (Nombre y DNI)</li>
+                      <li>Al menos un teléfono de contacto</li>
                     </ul>
                   </div>
 
@@ -800,49 +832,6 @@ export default function PaymentModal({ onClose }: Props) {
                         }`}/>
                       {!name.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
-                        DNI <span className="text-red-500">*</span>
-                      </label>
-                      <input type="text" placeholder="Ej: 12345678" value={dni} onChange={e => setDni(e.target.value)} required
-                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
-                          !dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                        }`}/>
-                      {!dni.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
-                        Teléfono / WhatsApp <span className="text-red-500">*</span>
-                      </label>
-                      <input type="tel" placeholder="Ej: 987654321" value={phone} onChange={e => setPhone(e.target.value)} required
-                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
-                          !phone.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                        }`}/>
-                      {!phone.trim() && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">
-                        Punto de embarque {boardingPoints.length > 0 && <span className="text-red-500">*</span>}
-                      </label>
-                      {boardingPoints.length > 0 ? (
-                        <>
-                          <select value={embarque} onChange={e => setEmbarque(e.target.value)} required
-                            className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${
-                              !embarque ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                            }`}>
-                            <option value="">Selecciona un punto de embarque</option>
-                            {boardingPoints.map((point, index) => (
-                              <option key={index} value={point.name}>{point.name} - {point.time}</option>
-                            ))}
-                            <option value="Otro">Otro (especificar en comentario)</option>
-                          </select>
-                          {!embarque && <p className="text-xs text-red-500 mt-1">Debes seleccionar un punto de embarque</p>}
-                        </>
-                      ) : (
-                        <input type="text" placeholder="Ej: Plaza San Martín, Lima" value={embarque} onChange={e => setEmbarque(e.target.value)}
-                          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
-                      )}
-                    </div>
                     {hasAnyAccommodation && (
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Habitación (si aplica)</label>
@@ -854,58 +843,158 @@ export default function PaymentModal({ onClose }: Props) {
                       <label className="block text-xs font-semibold text-gray-700 mb-2">
                         Datos de pasajeros <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-xs text-gray-500 mb-3">Al menos debes llenar nombre y DNI del primer pasajero</p>
-                      {passengers.map((passenger, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-3 mb-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-gray-600">
-                              Pasajero {index + 1} {index === 0 && <span className="text-red-500">*</span>}
-                            </span>
-                            {passengers.length > 1 && (
-                              <button type="button" onClick={() => setPassengers(passengers.filter((_, i) => i !== index))}
-                                className="text-red-500 text-xs hover:text-red-700">Eliminar</button>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Llena nombre y DNI del primer pasajero. Al menos 1 teléfono es obligatorio.
+                      </p>
+                      {passengers.map((passenger, index) => {
+                        const hasPhone = passengers.some(p => p.telefono.trim())
+                        const needsPhone = !hasPhone && index === 0
+                        
+                        return (
+                          <div key={index} className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-semibold text-gray-700">
+                                Pasajero {index + 1} {index === 0 && <span className="text-red-500">*</span>}
+                              </span>
+                              {passengers.length > 1 && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => setPassengers(passengers.filter((_, i) => i !== index))}
+                                  className="text-red-500 text-xs hover:text-red-700 font-semibold"
+                                >
+                                  Eliminar
+                                </button>
+                              )}
+                            </div>
+                            
+                            {/* Fila 1: Nombre, DNI, Edad */}
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                              <div>
+                                <input 
+                                  type="text" 
+                                  placeholder="Nombre *" 
+                                  value={passenger.nombre}
+                                  onChange={e => { 
+                                    const p = [...passengers]; 
+                                    p[index].nombre = e.target.value; 
+                                    setPassengers(p) 
+                                  }}
+                                  className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
+                                    index === 0 && !passenger.nombre.trim() 
+                                      ? 'border-red-300 bg-red-50' 
+                                      : 'border-gray-200'
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <input 
+                                  type="text" 
+                                  placeholder="DNI *" 
+                                  value={passenger.dni}
+                                  onChange={e => { 
+                                    const p = [...passengers]; 
+                                    p[index].dni = e.target.value; 
+                                    setPassengers(p) 
+                                  }}
+                                  className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
+                                    index === 0 && !passenger.dni.trim() 
+                                      ? 'border-red-300 bg-red-50' 
+                                      : 'border-gray-200'
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <input 
+                                  type="text" 
+                                  placeholder="Edad" 
+                                  value={passenger.edad}
+                                  onChange={e => { 
+                                    const p = [...passengers]; 
+                                    p[index].edad = e.target.value; 
+                                    setPassengers(p) 
+                                  }}
+                                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Fila 2: Teléfono y Punto de embarque */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <input 
+                                  type="tel" 
+                                  placeholder={needsPhone ? "Teléfono *" : "Teléfono"} 
+                                  value={passenger.telefono}
+                                  onChange={e => { 
+                                    const p = [...passengers]; 
+                                    p[index].telefono = e.target.value; 
+                                    setPassengers(p) 
+                                  }}
+                                  className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
+                                    needsPhone && !passenger.telefono.trim()
+                                      ? 'border-amber-300 bg-amber-50' 
+                                      : 'border-gray-200'
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                {boardingPoints.length > 0 ? (
+                                  <select 
+                                    value={passenger.embarque}
+                                    onChange={e => { 
+                                      const p = [...passengers]; 
+                                      p[index].embarque = e.target.value; 
+                                      setPassengers(p) 
+                                    }}
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                                  >
+                                    <option value="">Punto de embarque</option>
+                                    {boardingPoints.map((point, i) => (
+                                      <option key={i} value={point.name}>
+                                        {point.name} ({point.time})
+                                      </option>
+                                    ))}
+                                    <option value="Otro">Otro</option>
+                                  </select>
+                                ) : (
+                                  <input 
+                                    type="text" 
+                                    placeholder="Punto de embarque" 
+                                    value={passenger.embarque}
+                                    onChange={e => { 
+                                      const p = [...passengers]; 
+                                      p[index].embarque = e.target.value; 
+                                      setPassengers(p) 
+                                    }}
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                                  />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Mensajes de error */}
+                            {index === 0 && (!passenger.nombre.trim() || !passenger.dni.trim()) && (
+                              <p className="text-xs text-red-500 mt-2">⚠️ Nombre y DNI son obligatorios</p>
+                            )}
+                            {needsPhone && (
+                              <p className="text-xs text-amber-600 mt-2">⚠️ Al menos un pasajero debe tener teléfono</p>
                             )}
                           </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <input 
-                                type="text" 
-                                placeholder="Nombre *" 
-                                value={passenger.nombre}
-                                onChange={e => { const p = [...passengers]; p[index].nombre = e.target.value; setPassengers(p) }}
-                                className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
-                                  index === 0 && !passenger.nombre.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                                }`}
-                              />
-                            </div>
-                            <div>
-                              <input 
-                                type="text" 
-                                placeholder="DNI *" 
-                                value={passenger.dni}
-                                onChange={e => { const p = [...passengers]; p[index].dni = e.target.value; setPassengers(p) }}
-                                className={`w-full border rounded-lg px-2 py-1.5 text-xs ${
-                                  index === 0 && !passenger.dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                                }`}
-                              />
-                            </div>
-                            <div>
-                              <input 
-                                type="text" 
-                                placeholder="Edad" 
-                                value={passenger.edad}
-                                onChange={e => { const p = [...passengers]; p[index].edad = e.target.value; setPassengers(p) }}
-                                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
-                              />
-                            </div>
-                          </div>
-                          {index === 0 && (!passenger.nombre.trim() || !passenger.dni.trim()) && (
-                            <p className="text-xs text-red-500 mt-1">⚠️ Nombre y DNI son obligatorios</p>
-                          )}
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => setPassengers([...passengers, { nombre: '', dni: '', edad: '' }])}
-                        className="text-xs text-brand-teal hover:underline font-semibold">+ Agregar pasajero</button>
+                        )
+                      })}
+                      <button 
+                        type="button" 
+                        onClick={() => setPassengers([...passengers, { 
+                          nombre: '', 
+                          dni: '', 
+                          edad: '', 
+                          telefono: '', 
+                          embarque: '' 
+                        }])}
+                        className="text-xs text-brand-teal hover:underline font-semibold"
+                      >
+                        + Agregar pasajero
+                      </button>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Comentario adicional</label>
@@ -978,12 +1067,9 @@ interface CardPaymentFormProps {
     chargeId: string
     email: string
     holderName: string
-    phone: string
-    dni: string
-    embarque: string
     habitacion: string
     comentario: string
-    passengers: Array<{ nombre: string; dni: string; edad: string }>
+    passengers: Array<{ nombre: string; dni: string; edad: string; telefono: string; embarque: string }>
     amount: string
   }) => void
 }
@@ -999,9 +1085,6 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
   const [isProcessing, setIsProcessing] = useState(false)
   
   // Datos adicionales del cliente
-  const [phone, setPhone]         = useState('')
-  const [dni, setDni]             = useState('')
-  const [embarque, setEmbarque]   = useState('')
   const [habitacion, setHabitacion] = useState('')
   const [comentario, setComentario] = useState('')
   
@@ -1028,13 +1111,21 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
   // Inicializar pasajeros
   const initializePassengers = () => {
     const passengerCount = Math.max(1, totalPersonsFromCart)
-    return Array.from({ length: passengerCount }, () => ({ nombre: '', dni: '', edad: '' }))
+    return Array.from({ length: passengerCount }, () => ({ 
+      nombre: '', 
+      dni: '', 
+      edad: '',
+      telefono: '',
+      embarque: ''
+    }))
   }
   
   const [passengers, setPassengers] = useState<Array<{
     nombre: string
     dni: string
     edad: string
+    telefono: string
+    embarque: string
   }>>(initializePassengers())
 
   const reserveAmount    = totalPrice // 100% para tarjeta
@@ -1099,12 +1190,16 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
           metadata: {
             paquetes: tourNames.join(' | '),
             tipo: 'Pago completo',
-            telefono: phone,
-            dni,
-            embarque,
             habitacion,
             comentario,
-            pasajeros: passengers.filter(p => p.nombre || p.dni).map(p => `${p.nombre} (${p.dni})`).join(', ')
+            pasajeros: passengers.filter(p => p.nombre || p.dni || p.telefono || p.embarque)
+              .map(p => {
+                let info = p.nombre || 'Sin nombre'
+                if (p.dni) info += ` (DNI: ${p.dni})`
+                if (p.telefono) info += ` Tel: ${p.telefono}`
+                if (p.embarque) info += ` Embarque: ${p.embarque}`
+                return info
+              }).join(' | ')
           },
           items: items.map(item => ({
             tourId: item.tourId || item.id,
@@ -1138,12 +1233,9 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         chargeId: finalChargeId,
         email,
         holderName,
-        phone,
-        dni,
-        embarque,
         habitacion,
         comentario,
-        passengers: passengers.filter(p => p.nombre || p.dni || p.edad),
+        passengers: passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque),
         amount: reserveAmountStr,
       })
       
@@ -1259,34 +1351,6 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
         </div>
         
         <div className="space-y-3">
-          {/* DNI */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">DNI *</label>
-            <input type="text" placeholder="Ej: 12345678" value={dni} onChange={e => setDni(e.target.value)} required
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
-          </div>
-          
-          {/* Teléfono */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Teléfono / WhatsApp *</label>
-            <input type="tel" placeholder="Ej: 987654321" value={phone} onChange={e => setPhone(e.target.value)} required
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"/>
-          </div>
-          
-          {/* Punto de embarque */}
-          {boardingPoints.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Punto de embarque</label>
-              <select value={embarque} onChange={e => setEmbarque(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal">
-                <option value="">Selecciona un punto</option>
-                {boardingPoints.map((point: { name: string; address: string; time: string }, i: number) => (
-                  <option key={i} value={point.name}>{point.name} - {point.time}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          
           {/* Habitación */}
           {hasAnyAccommodation && (
             <div>
@@ -1316,46 +1380,116 @@ function CardPaymentForm({ totalPrice, tourNames = [], items, onSuccess }: CardP
               <p className="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                 Datos de pasajeros ({totalPersonsFromCart} persona{totalPersonsFromCart > 1 ? 's' : ''}) <span className="text-red-500">*</span>
               </p>
-              <p className="text-xs text-gray-500 mb-3">Al menos debes llenar nombre y DNI del primer pasajero</p>
-              <div className="space-y-3 max-h-48 overflow-y-auto">
-                {passengers.map((p, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-600">
-                      Pasajero {i + 1} {i === 0 && <span className="text-red-500">*</span>}
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="Nombre *" 
-                        value={p.nombre}
-                        onChange={e => {
-                          const updated = [...passengers]
-                          updated[i].nombre = e.target.value
-                          setPassengers(updated)
-                        }}
-                        className={`col-span-2 border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
-                          i === 0 && !p.nombre.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="DNI *" 
-                        value={p.dni}
-                        onChange={e => {
-                          const updated = [...passengers]
-                          updated[i].dni = e.target.value
-                          setPassengers(updated)
-                        }}
-                        className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
-                          i === 0 && !p.dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
+              <p className="text-xs text-gray-500 mb-3">Llena nombre y DNI del primer pasajero. Al menos 1 teléfono es obligatorio.</p>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {passengers.map((p, i) => {
+                  const hasPhone = passengers.some(pass => pass.telefono.trim())
+                  const needsPhone = !hasPhone && i === 0
+                  
+                  return (
+                    <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-semibold text-gray-600">
+                        Pasajero {i + 1} {i === 0 && <span className="text-red-500">*</span>}
+                      </p>
+                      
+                      {/* Fila 1: Nombre, DNI, Edad */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="Nombre *" 
+                          value={p.nombre}
+                          onChange={e => {
+                            const updated = [...passengers]
+                            updated[i].nombre = e.target.value
+                            setPassengers(updated)
+                          }}
+                          className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
+                            i === 0 && !p.nombre.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="DNI *" 
+                          value={p.dni}
+                          onChange={e => {
+                            const updated = [...passengers]
+                            updated[i].dni = e.target.value
+                            setPassengers(updated)
+                          }}
+                          className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
+                            i === 0 && !p.dni.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Edad" 
+                          value={p.edad}
+                          onChange={e => {
+                            const updated = [...passengers]
+                            updated[i].edad = e.target.value
+                            setPassengers(updated)
+                          }}
+                          className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                        />
+                      </div>
+                      
+                      {/* Fila 2: Teléfono y Punto de embarque */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <input 
+                          type="tel" 
+                          placeholder={needsPhone ? "Teléfono *" : "Teléfono"} 
+                          value={p.telefono}
+                          onChange={e => {
+                            const updated = [...passengers]
+                            updated[i].telefono = e.target.value
+                            setPassengers(updated)
+                          }}
+                          className={`border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal ${
+                            needsPhone && !p.telefono.trim() ? 'border-amber-300 bg-amber-50' : 'border-gray-300'
+                          }`}
+                        />
+                        {boardingPoints.length > 0 ? (
+                          <select 
+                            value={p.embarque}
+                            onChange={e => {
+                              const updated = [...passengers]
+                              updated[i].embarque = e.target.value
+                              setPassengers(updated)
+                            }}
+                            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                          >
+                            <option value="">Punto de embarque</option>
+                            {boardingPoints.map((point: { name: string; time: string }, idx: number) => (
+                              <option key={idx} value={point.name}>
+                                {point.name} ({point.time})
+                              </option>
+                            ))}
+                            <option value="Otro">Otro</option>
+                          </select>
+                        ) : (
+                          <input 
+                            type="text" 
+                            placeholder="Punto de embarque" 
+                            value={p.embarque}
+                            onChange={e => {
+                              const updated = [...passengers]
+                              updated[i].embarque = e.target.value
+                              setPassengers(updated)
+                            }}
+                            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                          />
+                        )}
+                      </div>
+                      
+                      {i === 0 && (!p.nombre.trim() || !p.dni.trim()) && (
+                        <p className="text-xs text-red-500">⚠️ Nombre y DNI son obligatorios</p>
+                      )}
+                      {needsPhone && (
+                        <p className="text-xs text-amber-600">⚠️ Al menos un pasajero debe tener teléfono</p>
+                      )}
                     </div>
-                    {i === 0 && (!p.nombre.trim() || !p.dni.trim()) && (
-                      <p className="text-xs text-red-500">⚠️ Nombre y DNI son obligatorios</p>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
