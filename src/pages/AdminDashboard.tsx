@@ -2208,8 +2208,8 @@ function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab,
           step="0.1"
           min="0"
           max="5"
-          value={formData.rating || 5.0}
-          onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
+          value={formData.rating ?? 5.0}
+          onChange={(e) => setFormData(prev => ({ ...prev, rating: Number(e.target.value) }))}
           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
         />
       </div>

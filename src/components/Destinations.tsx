@@ -49,8 +49,6 @@ export default function Destinations() {
   }, [tourList])
 
   useEffect(() => {
-    console.log('===== Destinations Component Loading =====')
-    
     async function loadTours() {
       try {
         const res = await fetch(`${API_URL}/api/tours`)
@@ -64,22 +62,12 @@ export default function Destinations() {
         const data = await res.json()
         
         if (data.ok && data.tours && data.tours.length > 0) {
-          console.log(`Loaded ${data.tours.length} tours from MongoDB`)
-          data.tours.forEach((t: any) => {
-            console.log(`  Tour: "${t.name}" with ID: "${t.id}" (disabled: ${!!t.disabled})`)
-          })
           setTourList(data.tours)
         } else {
-          console.log('No tours in MongoDB, using original data')
-          console.log(`Original tours count: ${tours.length}`)
-          tours.forEach(t => {
-            console.log(`  Tour: "${t.name}" with ID: "${t.id}"`)
-          })
           setTourList(tours)
         }
       } catch (error) {
         console.error('Error loading tours from API:', error)
-        console.log('Falling back to original tours data')
         setTourList(tours)
       } finally {
         setLoading(false)
@@ -87,7 +75,11 @@ export default function Destinations() {
     }
     
     loadTours()
-    console.log('===== Destinations Component Loaded =====')
+
+    // Refrescar cuando el usuario vuelve a la pestaña (por si agregó nuevos tours)
+    const onFocus = () => loadTours()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [])
 
   const filtered = tourList.filter((t) => {
