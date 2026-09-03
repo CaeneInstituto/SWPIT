@@ -11,6 +11,7 @@ import {
 import { getTourById } from '../data/tours'
 import type { DayItinerary, Activity, Tour } from '../data/tours'
 import { formatToTime12 } from '../utils/timeFormat'
+import Navbar from './Navbar'
 import WhatsAppChat from './WhatsAppChat'
 import AddToCartButton from './AddToCartButton'
 
@@ -272,6 +273,7 @@ export default function TourDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
 
       {/* Hero banner — imagen estática */}
       <div

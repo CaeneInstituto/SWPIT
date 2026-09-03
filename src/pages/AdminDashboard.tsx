@@ -9,6 +9,7 @@ import {
   Sun, Snowflake, Leaf, Calendar as CalendarIcon, Percent, Tag,
   MessageSquare, Database, ShoppingCart, Download
 } from 'lucide-react'
+import Navbar from '../components/Navbar'
 
 // API Helpers
 const API_URL = (import.meta as any).env?.VITE_API_URL || ''
@@ -607,6 +608,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
