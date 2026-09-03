@@ -13,7 +13,7 @@
  * - "1:30" → "01:30" (sin am/pm asume formato 24h)
  */
 export function normalizeToTime24(time: string): string {
-  if (!time || time.trim() === '') return '08:00'
+  if (!time || time.trim() === '') return '--'
   
   const cleaned = time.trim().toLowerCase()
   
@@ -33,7 +33,7 @@ export function normalizeToTime24(time: string): string {
       return `${hours.padStart(2, '0')}:${minutes}`
     }
     console.warn('Invalid time format:', time)
-    return '08:00'
+    return '--'
   }
   
   let [, hours, minutes, period] = match
@@ -63,7 +63,7 @@ export function normalizeToTime24(time: string): string {
  * - Formatos descriptivos como "Mañana", "Tarde" → se devuelven tal como están
  */
 export function formatToTime12(time24: string): string {
-  if (!time24 || time24.trim() === '') return '08:00 am'
+  if (!time24 || time24.trim() === '') return '--'
   
   const cleaned = time24.trim()
   
@@ -77,7 +77,7 @@ export function formatToTime12(time24: string): string {
   // Si ya tiene am/pm, extraer la hora y verificar si es formato mixto incorrecto
   if (lowerCleaned.includes('am') || lowerCleaned.includes('pm')) {
     const match = lowerCleaned.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
-    if (!match) return '08:00 am'
+    if (!match) return '--'
     
     const [, hoursStr, minutes, period] = match
     let hours = parseInt(hoursStr, 10)
@@ -100,7 +100,7 @@ export function formatToTime12(time24: string): string {
   const match = lowerCleaned.match(/(\d{1,2}):(\d{2})/)
   if (!match) {
     console.warn('Invalid 24h time format:', time24)
-    return '08:00 am'
+    return '--'
   }
   
   const [, hoursStr, minutes] = match
@@ -139,6 +139,6 @@ export function isValidTime(time: string): boolean {
 export function normalizeActivities<T extends { time?: string }>(activities: T[]): T[] {
   return activities.map(act => ({
     ...act,
-    time: normalizeToTime24(act.time || '08:00')
+    time: normalizeToTime24(act.time || '')
   }))
 }
