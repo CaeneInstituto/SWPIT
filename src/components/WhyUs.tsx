@@ -1,5 +1,5 @@
 const features = [
-  { icon: '🏆', title: 'Experiencia comprobada',   desc: 'Más de 15 años llevando viajeros a los rincones más increíbles del Perú con total seguridad.' },
+  { icon: '🏆', title: 'Experiencia comprobada',   desc: 'Más de 6 años llevando viajeros a los rincones más increíbles del Perú con total seguridad.' },
   { icon: '🗺️', title: 'Guías certificados',        desc: 'Nuestros guías son locales certificados que conocen cada historia, ruta y secreto del destino.' },
   { icon: '💼', title: 'Todo incluido',             desc: 'Transporte, alojamiento, alimentación y actividades. Tú solo preocúpate de disfrutar.' },
   { icon: '📞', title: 'Soporte 24/7',              desc: 'Estamos disponibles en todo momento durante tu viaje para cualquier consulta o emergencia.' },

@@ -105,9 +105,9 @@ export default function Hero() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
           {[
-            { value: '15+', label: 'Años de experiencia' },
-            { value: '5K+', label: 'Viajeros felices'    },
-            { value: '50+', label: 'Destinos'            },
+            { value: '6+', label: 'Años de experiencia' },
+            { value: '20K+', label: 'Viajeros felices'    },
+            { value: '20+', label: 'Destinos'            },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <div className="text-3xl font-extrabold text-brand-yellow">{s.value}</div>
