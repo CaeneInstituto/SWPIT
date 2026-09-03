@@ -126,10 +126,7 @@ export default function Destinations() {
       t.name.toLowerCase().includes(searchLower) ||
       (t.location || '').toLowerCase().includes(searchLower)
     return matchRegion && matchDuration && matchPrice && matchSearch
-  })
-
-  // Log de debug
-  console.log('Filtered tours:', filtered.length, 'out of', tourList.length)
+  }).sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
 
   return (
     <section id="destinos" className="py-24 bg-gray-50">
