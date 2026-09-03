@@ -25,6 +25,14 @@ export interface BoardingPoint {
   time: string
 }
 
+// Días de la semana disponibles para un tour
+export type WeekDay = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo'
+
+export interface AvailableDates {
+  weekDays?: WeekDay[]       // Días recurrentes: ['Sábado', 'Domingo']
+  specificDates?: string[]   // Fechas exactas en ISO: ['2026-07-28', '2026-12-25']
+}
+
 export interface Tour {
   _id?: string             // ID de MongoDB (opcional, solo cuando viene de la BD)
   id: string
@@ -51,6 +59,7 @@ export interface Tour {
   departureDays?: string[]
   returnTime?: string
   terms?: string[]
+  availableDates?: AvailableDates  // Fechas disponibles para reservar (días semana + fechas específicas)
   disabled?: boolean // Para habilitar/deshabilitar paquetes desde admin
   seasons?: string[] // Temporadas en las que está disponible: 'verano', 'invierno', 'primavera', 'otoño', 'semana-santa', 'fiestas-patrias', etc.
   seasonalDiscount?: number // Descuento porcentual para aplicar en temporada activa

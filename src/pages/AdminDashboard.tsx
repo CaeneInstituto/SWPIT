@@ -2691,6 +2691,134 @@ function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArra
         </div>
       </div>
 
+      {/* ── Fechas Disponibles ─────────────────────────────────────────────── */}
+      <div className="border-t pt-6">
+        <h4 className="text-md font-bold text-gray-900 mb-1 flex items-center gap-2">
+          🗓️ Fechas Disponibles para Reservar
+        </h4>
+        <p className="text-xs text-gray-500 mb-4">
+          Configura qué días puede reservar el cliente. Si no configuras nada, cualquier fecha futura estará disponible.
+        </p>
+
+        {/* Días de la semana recurrentes */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Días recurrentes de la semana
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'] as const).map(day => {
+              const selected = (formData.availableDates?.weekDays || []).includes(day)
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => {
+                      const current = prev.availableDates?.weekDays || []
+                      const updated = selected
+                        ? current.filter(d => d !== day)
+                        : [...current, day]
+                      return { ...prev, availableDates: { ...prev.availableDates, weekDays: updated } }
+                    })
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
+                    selected
+                      ? 'bg-brand-teal text-white border-brand-teal'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-brand-teal'
+                  }`}
+                >
+                  {day}
+                </button>
+              )
+            })}
+          </div>
+          {(formData.availableDates?.weekDays || []).length > 0 && (
+            <p className="text-xs text-brand-teal mt-2">
+              ✓ Sale cada: {(formData.availableDates?.weekDays || []).join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Fechas específicas */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Fechas específicas (feriados, eventos especiales, etc.)
+          </label>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="date"
+              id="specific-date-input"
+              min={new Date().toISOString().split('T')[0]}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.getElementById('specific-date-input') as HTMLInputElement
+                const val = input?.value
+                if (!val) return
+                setFormData(prev => {
+                  const current = prev.availableDates?.specificDates || []
+                  if (current.includes(val)) return prev
+                  return { ...prev, availableDates: { ...prev.availableDates, specificDates: [...current, val].sort() } }
+                })
+                if (input) input.value = ''
+              }}
+              className="px-4 py-2 bg-brand-teal text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+            >
+              + Agregar
+            </button>
+          </div>
+
+          {/* Lista de fechas específicas */}
+          {(formData.availableDates?.specificDates || []).length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {(formData.availableDates?.specificDates || []).map(date => {
+                // Formatear fecha a texto legible: "2026-07-28" → "Mar 28 Jul 2026"
+                const d = new Date(date + 'T12:00:00')
+                const label = d.toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                return (
+                  <span key={date} className="inline-flex items-center gap-1.5 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold px-3 py-1.5 rounded-full">
+                    📅 {label}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          availableDates: {
+                            ...prev.availableDates,
+                            specificDates: (prev.availableDates?.specificDates || []).filter(d => d !== date)
+                          }
+                        }))
+                      }}
+                      className="text-teal-500 hover:text-red-500 transition-colors ml-1 font-bold"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No hay fechas específicas agregadas.</p>
+          )}
+        </div>
+
+        {/* Resumen visual */}
+        {((formData.availableDates?.weekDays || []).length > 0 || (formData.availableDates?.specificDates || []).length > 0) && (
+          <div className="mt-4 bg-teal-50 border border-teal-200 rounded-lg p-3 text-xs text-teal-800">
+            <p className="font-semibold mb-1">📋 Configuración activa:</p>
+            {(formData.availableDates?.weekDays || []).length > 0 && (
+              <p>• Recurrente: cada {(formData.availableDates?.weekDays || []).join(', ')}</p>
+            )}
+            {(formData.availableDates?.specificDates || []).length > 0 && (
+              <p>• {(formData.availableDates?.specificDates || []).length} fecha(s) específica(s) configuradas</p>
+            )}
+            <p className="mt-1 text-teal-600">El cliente solo podrá seleccionar estas fechas en el carrito.</p>
+          </div>
+        )}
+      </div>
+
       {/* Términos y Condiciones */}
       <div className="border-t pt-6">
         <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">

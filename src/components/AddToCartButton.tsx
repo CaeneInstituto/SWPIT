@@ -1,6 +1,176 @@
 import { useState } from 'react'
 import { useCart, detectPersonsPerPackage, detectHasAccommodation } from '../context/CartContext'
-import type { Tour } from '../data/tours'
+import type { Tour, WeekDay } from '../data/tours'
+
+// ── Helpers de fechas disponibles ────────────────────────────────────────────
+
+const WEEKDAY_NAMES: WeekDay[] = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+
+/** Devuelve true si la fecha ISO (YYYY-MM-DD) está disponible para el tour */
+function isDateAvailable(dateStr: string, tour: Tour): boolean {
+  const ad = tour.availableDates
+  // Sin configuración → cualquier fecha futura es válida
+  if (!ad || (!ad.weekDays?.length && !ad.specificDates?.length)) return true
+
+  const d = new Date(dateStr + 'T12:00:00')
+  const dayName = WEEKDAY_NAMES[d.getDay()] as WeekDay
+
+  const matchesWeekDay = (ad.weekDays || []).includes(dayName)
+  const matchesSpecific = (ad.specificDates || []).includes(dateStr)
+
+  return matchesWeekDay || matchesSpecific
+}
+
+/** Calcula el primer mes a mostrar (mes del primer día disponible desde hoy) */
+function getInitialMonth(tour: Tour): { year: number; month: number } {
+  const today = new Date()
+  // Buscar el próximo día disponible en los próximos 90 días
+  for (let i = 1; i <= 90; i++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() + i)
+    const iso = d.toISOString().split('T')[0]
+    if (isDateAvailable(iso, tour)) {
+      return { year: d.getFullYear(), month: d.getMonth() }
+    }
+  }
+  return { year: today.getFullYear(), month: today.getMonth() }
+}
+
+// ── Mini calendario custom ────────────────────────────────────────────────────
+
+interface DatePickerProps {
+  tour: Tour
+  value: string
+  onChange: (date: string) => void
+  minDate: string
+}
+
+function TourDatePicker({ tour, value, onChange, minDate }: DatePickerProps) {
+  const ad = tour.availableDates
+  const hasConfig = ad && (ad.weekDays?.length || ad.specificDates?.length)
+
+  // Si no hay configuración, usar input nativo simple
+  if (!hasConfig) {
+    return (
+      <input
+        id="travel-date"
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        min={minDate}
+        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+        required
+      />
+    )
+  }
+
+  const init = getInitialMonth(tour)
+  const [viewYear, setViewYear] = useState(init.year)
+  const [viewMonth, setViewMonth] = useState(init.month)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const monthName = new Date(viewYear, viewMonth, 1)
+    .toLocaleDateString('es-PE', { month: 'long', year: 'numeric' })
+
+  // Primer día de la semana del mes (0=Dom)
+  const firstDow = new Date(viewYear, viewMonth, 1).getDay()
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
+
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  ]
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Cabecera del mes */}
+      <div className="flex items-center justify-between bg-gray-50 px-4 py-2 border-b">
+        <button type="button" onClick={prevMonth} className="p-1 hover:bg-gray-200 rounded-lg transition-colors text-gray-600">‹</button>
+        <span className="text-sm font-semibold text-gray-800 capitalize">{monthName}</span>
+        <button type="button" onClick={nextMonth} className="p-1 hover:bg-gray-200 rounded-lg transition-colors text-gray-600">›</button>
+      </div>
+
+      {/* Días de la semana */}
+      <div className="grid grid-cols-7 bg-gray-50 border-b">
+        {['Do','Lu','Ma','Mi','Ju','Vi','Sá'].map(d => (
+          <div key={d} className="text-center text-xs font-bold text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Celdas */}
+      <div className="grid grid-cols-7 p-2 gap-1">
+        {cells.map((day, idx) => {
+          if (!day) return <div key={idx} />
+          const iso = `${viewYear}-${String(viewMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+          const dateObj = new Date(iso + 'T12:00:00')
+          const isPast = dateObj <= today
+          const available = !isPast && isDateAvailable(iso, tour)
+          const isSelected = value === iso
+          const isSpecific = (ad?.specificDates || []).includes(iso)
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={!available}
+              onClick={() => available && onChange(iso)}
+              className={`
+                relative w-full aspect-square flex items-center justify-center rounded-lg text-xs font-semibold transition-all
+                ${isSelected ? 'bg-brand-teal text-white shadow-md scale-105' : ''}
+                ${!isSelected && available && !isSpecific ? 'hover:bg-teal-50 text-gray-800' : ''}
+                ${!isSelected && available && isSpecific ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200' : ''}
+                ${!available ? 'text-gray-200 cursor-not-allowed' : 'cursor-pointer'}
+              `}
+              title={isSpecific ? '📅 Fecha especial' : available ? 'Disponible' : 'No disponible'}
+            >
+              {day}
+              {isSpecific && !isSelected && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex gap-3 px-3 pb-2 pt-1 text-xs text-gray-500 border-t bg-gray-50">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-brand-teal inline-block" /> Seleccionado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-50 border border-amber-200 inline-block" /> Fecha especial</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 inline-block" /> No disponible</span>
+      </div>
+
+      {/* Fecha seleccionada */}
+      {value && (
+        <div className="px-3 pb-2 text-xs text-brand-teal font-semibold">
+          ✓ {new Date(value + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </div>
+      )}
+
+      {/* Info días disponibles */}
+      {ad?.weekDays?.length ? (
+        <div className="px-3 pb-3 text-xs text-gray-400">
+          Sale los: {ad.weekDays.join(', ')}
+          {ad.specificDates?.length ? ` + ${ad.specificDates.length} fecha(s) especial(es)` : ''}
+        </div>
+      ) : ad?.specificDates?.length ? (
+        <div className="px-3 pb-3 text-xs text-gray-400">
+          Solo fechas especiales configuradas
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 interface PersonPackageAssignment {
   personIndex: number
@@ -865,17 +1035,14 @@ function DynamicCartModal({
 
             {/* Travel Date */}
             <div>
-              <label htmlFor="travel-date" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Fecha de viaje
               </label>
-              <input
-                id="travel-date"
-                type="date"
+              <TourDatePicker
+                tour={tour}
                 value={travelDate}
-                onChange={(e) => setTravelDate(e.target.value)}
-                min={minDate}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
-                required
+                onChange={setTravelDate}
+                minDate={minDate}
               />
             </div>
 
