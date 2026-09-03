@@ -208,9 +208,23 @@ async function fetchTours(): Promise<Tour[]> {
 }
 
 async function saveTourToAPI(tour: Tour): Promise<boolean> {
+  if (!API_URL) {
+    console.error('❌ API_URL is not defined!')
+    alert('❌ Error: API_URL no está configurado')
+    return false
+  }
+  
   try {
     const method = tour._id ? 'PUT' : 'POST'
     const url = tour._id ? `${API_URL}/api/tours/${tour.id}` : `${API_URL}/api/tours`
+    
+    console.log(`🔄 ${method} request to:`, url)
+    console.log('🔄 Tour data:', {
+      name: tour.name,
+      id: tour.id,
+      _id: tour._id,
+      hasItinerary: !!tour.itinerary?.length
+    })
     
     const res = await fetch(url, {
       method,
@@ -221,13 +235,24 @@ async function saveTourToAPI(tour: Tour): Promise<boolean> {
     if (!res.ok) {
       const text = await res.text()
       console.error(`❌ API ${method} ${url} returned ${res.status}:`, text)
+      alert(`❌ Error ${method} tour: ${res.status} - ${text}`)
       return false
     }
     
     const data = await res.json()
-    return data.ok
+    console.log('📥 API response:', data)
+    
+    if (data.ok) {
+      console.log('✅ Tour saved successfully to MongoDB')
+      return true
+    } else {
+      console.error('❌ API returned ok=false:', data)
+      alert(`❌ API error: ${JSON.stringify(data)}`)
+      return false
+    }
   } catch (error) {
-    console.error('Error saving tour:', error)
+    console.error('❌ Network/fetch error:', error)
+    alert(`❌ Network error: ${error.message}`)
     return false
   }
 }
@@ -324,8 +349,22 @@ export default function AdminDashboard() {
     setTourList(normalizedTours)
     
     // Guardar cada tour en MongoDB
+    let allSuccess = true
     for (const tour of normalizedTours) {
-      await saveTourToAPI(tour)
+      console.log('💾 Guardando tour:', tour.name, tour.id)
+      const success = await saveTourToAPI(tour)
+      if (!success) {
+        console.error('❌ Error guardando tour:', tour.name)
+        allSuccess = false
+      } else {
+        console.log('✅ Tour guardado exitosamente:', tour.name)
+      }
+    }
+    
+    if (!allSuccess) {
+      alert('❌ Error: Algunos tours no se pudieron guardar. Revisa la consola para más detalles.')
+    } else {
+      console.log('✅ Todos los tours guardados exitosamente')
     }
   }
 
