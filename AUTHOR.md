@@ -9,14 +9,12 @@
 ---
 
 ## 💡 Creadores de la Idea
-*Estudiante de la Universidad Ricardo Palma*
-*De la escuela de Ingeniería*
+*Estudiante de la Universidad Ricardo Palma de la escuela de Ingeniería*
 ### **Anthony Galvan**
 *Desarrollador del sistema web para Peru In Travel*
 
 
-*Estudiantes de la Universidad Nacional Mayor de San Marcos*
-*De la escuela de Administración de Turismo*
+*Estudiantes de la Universidad Nacional Mayor de San Marcos de la escuela de Administración de Turismo*
 ### **Elian Liz Eugenio Saldana**
 *Creadora de la idea del sitio web de Perú in travel *
 
