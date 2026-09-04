@@ -15,7 +15,7 @@
 
 
 *Estudiantes de la Universidad Nacional Mayor de San Marcos de la escuela de Administración de Turismo*
-### **Elian Liz Eugenio Saldana**
+### **Elian Liz Eugenio Saldaña**
 *Creadora de la idea del sitio web de Perú in travel *
 
 ---
