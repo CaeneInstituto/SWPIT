@@ -43,6 +43,6 @@
 
 ---
 
-### 📅 Proyecto desarrollado en 2024 — 🇵🇪 Hecho con amor desde Perú
+### 📅 Proyecto desarrollado en 2026 — 🇵🇪 Hecho con amor desde Perú
 
 </div>
