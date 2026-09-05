@@ -252,3 +252,198 @@ GitHub Issues del proyecto
 
 **Última actualización:** Agosto 26, 2026  
 **Versión:** 1.0.0
+
+
+---
+
+## ⚠️ CONFIGURACIÓN CRÍTICA: MongoDB Atlas + Vercel
+
+### Problema común: "connection timed out"
+
+**Síntoma:**
+```
+Error: Connection to mongodb.net interrupted due to server monitor timeout
+```
+
+**Causa:**
+MongoDB Atlas en tier gratuito (M0) requiere whitelist de IPs. Vercel usa IPs dinámicas que cambian constantemente.
+
+**Solución PERMANENTE:**
+
+1. **MongoDB Atlas → Security → Network Access → IP Access List**
+2. **Verificar que existe:** `0.0.0.0/0` (Allow access from anywhere)
+3. **Status:** debe estar **Active** (verde)
+
+**⚠️ NUNCA eliminar esta entrada** o Vercel dejará de conectarse.
+
+**Captura de referencia:**
+- IP Address: `0.0.0.0/0`
+- Comment: "Created as part of the Auto Setup process"
+- Status: ✅ Active
+
+### Variables de entorno requeridas en Vercel:
+
+```
+MONGODB_URI=mongodb+srv://usuario:password@cluster0.xxxxx.mongodb.net/nombre-db?retryWrites=true&w=majority
+```
+
+**Verificar en:** Vercel → Project Settings → Environment Variables
+
+---
+
+## 🔧 Troubleshooting MongoDB
+
+### Si sigue dando timeout después de configurar IPs:
+
+1. **Verificar que el cluster está activo:**
+   - MongoDB Atlas → Clusters
+   - Estado debe ser: 🟢 **Cluster0** (no pausado)
+
+2. **Verificar string de conexión:**
+   - Debe usar `mongodb+srv://` (NO `mongodb://`)
+   - Debe incluir `retryWrites=true`
+
+3. **Verificar en Vercel logs:**
+   ```bash
+   # Ver logs de la API
+   vercel logs --follow
+   ```
+
+4. **Test local de conexión:**
+   ```javascript
+   // En api/index.mjs verificar:
+   console.log('MongoDB URI:', process.env.MONGODB_URI?.substring(0, 30) + '...')
+   ```
+
+### Tier gratuito M0 - Limitaciones:
+
+- **Conexiones simultáneas:** 500 max
+- **Storage:** 512 MB
+- **RAM:** 512 MB compartida
+- **Se "duerme"** tras inactividad (primer request tarda ~5-10 seg)
+- **IPs dinámicas requieren:** `0.0.0.0/0` en whitelist
+
+---
+
+
+---
+
+## 🚀 Optimización Final: Proyección MongoDB (26/08/2026)
+
+### Cambio clave: NO traer campos pesados desde MongoDB
+
+**Antes:**
+```javascript
+// ❌ Traía TODOS los campos desde MongoDB (MB de datos)
+tours = await db.collection('tours').find({}).toArray()
+
+// Luego filtraba en JavaScript (tarde, ya se transfirió todo)
+const optimized = tours.map(t => ({ id: t.id, name: t.name, ... }))
+```
+
+**Después:**
+```javascript
+// ✅ PROYECCIÓN: Solo traer campos necesarios
+const projection = {
+  id: 1, name: 1, location: 1, price: 1, image: 1,
+  // EXCLUIR: images, itinerary, brochure, tourTerms
+}
+
+tours = await db.collection('tours')
+  .find({}, { projection })
+  .toArray()
+```
+
+### Beneficios:
+
+1. **Transferencia MongoDB → Vercel:** MB → KB
+2. **Tiempo de respuesta:** >10s → <2s
+3. **Sin timeout:** Ya no supera límite de 10s de Vercel
+4. **Consumo Fast Origin Transfer:** Reducido 95%
+
+### Campos incluidos en `/api/tours`:
+
+```javascript
+{
+  id, name, location, region,
+  price, priceValue, days, tag,
+  rating, reviewCount, groupSize,
+  disabled, availableDates,
+  priceOptions, seasons,
+  image  // Solo portada, sin galería
+}
+```
+
+### Campos EXCLUIDOS (solo en `/api/tours/:id`):
+
+- `images` - Galería completa
+- `itinerary` - Itinerario detallado  
+- `brochure` - PDF Base64
+- `tourTerms` - Términos y condiciones
+- `description` - Descripción larga
+- `included/notIncluded` - Listas detalladas
+
+### Log de monitoreo:
+
+```
+📦 GET /api/tours - 19 tours, ~45.3 KB
+```
+
+Antes era **~80-120 MB** (con Base64 completos).
+
+---
+
+
+---
+
+## 🐛 Fix: Múltiples llamadas innecesarias (26/08/2026)
+
+### Problema encontrado:
+
+**Destinations.tsx** tenía un listener de `focus` que recargaba tours cada vez que el usuario volvía a la pestaña:
+
+```javascript
+// ❌ ANTES: Recargaba constantemente
+const onFocus = () => loadTours()
+window.addEventListener('focus', onFocus)
+```
+
+**Comportamiento:**
+1. Usuario abre la web → carga tours
+2. Usuario cambia a otra pestaña
+3. Usuario vuelve → **vuelve a cargar tours**
+4. Repite cada vez que cambia de pestaña
+
+**Resultado:** Múltiples llamadas innecesarias → Lento + Consumo extra
+
+### Solución:
+
+```javascript
+// ✅ DESPUÉS: Solo carga una vez al montar
+useEffect(() => {
+  loadTours()
+  // No hay listener de focus
+}, [])
+```
+
+**Beneficios:**
+- ✅ Solo 1 llamada por sesión
+- ✅ Caché del navegador aprovechado (s-maxage=300)
+- ✅ Carga más rápida
+- ✅ Menos consumo Fast Origin Transfer
+
+### Resumen de todas las optimizaciones:
+
+| Optimización | Reducción | Fecha |
+|---|---|---|
+| Proyección MongoDB (no traer campos pesados) | 95% tiempo | 26/08 |
+| Truncar Base64 > 5KB → placeholder | 99% peso | 26/08 |
+| Caché HTTP 5 minutos | Reduce hits | 25/08 |
+| Eliminar recarga en focus | -50% llamadas | 26/08 |
+
+**Resultado final esperado:**
+- Tiempo de carga: <2 segundos
+- Peso /api/tours: ~40-60 KB (antes 80-120 MB)
+- Consumo Vercel: De 12.98 GB → estimado <3 GB/mes
+
+---

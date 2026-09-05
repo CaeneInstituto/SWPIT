@@ -5,66 +5,17 @@ const MONGODB_URI      = process.env.MONGODB_URI      || ''
 
 // ── MongoDB (conexión cacheada entre invocaciones) ────────────────────────────
 let cachedDb = null
-let cachedClient = null
 
 async function getDb() {
-  const startTime = Date.now()
-  
-  if (cachedDb && cachedClient) {
-    try {
-      // Verificar que la conexión sigue activa con ping rápido
-      const pingStart = Date.now()
-      await cachedClient.db().admin().ping()
-      const pingTime = Date.now() - pingStart
-      console.log(`✅ Conexión cacheada válida (ping: ${pingTime}ms)`)
-      return cachedDb
-    } catch (error) {
-      console.log('⚠️ Conexión MongoDB perdida, reconectando...')
-      cachedDb = null
-      cachedClient = null
-    }
-  }
-  
-  if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI no configurado')
-  }
-  
-  // Validar que sea mongodb+srv:// (formato recomendado)
-  if (!MONGODB_URI.startsWith('mongodb+srv://') && !MONGODB_URI.startsWith('mongodb://')) {
-    throw new Error('MONGODB_URI debe comenzar con mongodb+srv:// o mongodb://')
-  }
-  
-  console.log('🔌 Conectando a MongoDB Atlas...')
-  const connectStart = Date.now()
-  
+  if (cachedDb) return cachedDb
+  if (!MONGODB_URI) throw new Error('MONGODB_URI no configurado')
   const client = new MongoClient(MONGODB_URI, {
-    // Timeouts optimizados para Vercel Serverless
-    serverSelectionTimeoutMS: 10000,  // 10 segundos (reducido de 30s)
-    connectTimeoutMS: 10000,          // 10 segundos para conectar
-    socketTimeoutMS: 45000,           // 45 segundos para operaciones
-    
-    // Pool de conexiones para serverless
-    maxPoolSize: 10,                  // Máximo 10 conexiones simultáneas
-    minPoolSize: 1,                   // Mínimo 1 (serverless puede escalar a 0)
-    maxIdleTimeMS: 10000,             // Cerrar conexiones inactivas tras 10s
-    
-    // Opciones de resiliencia
-    retryWrites: true,                // Reintentar escrituras automáticamente
-    retryReads: true,                 // Reintentar lecturas automáticamente
-    
-    // TLS/SSL (obligatorio para Atlas)
+    serverSelectionTimeoutMS: 8000,
+    connectTimeoutMS: 8000,
     tls: true,
-    
-    // Compresión para reducir transferencia
-    compressors: ['zlib'],
   })
-  
   await client.connect()
-  const connectTime = Date.now() - connectStart
-  cachedClient = client
   cachedDb = client.db('peruintravel')
-  const totalTime = Date.now() - startTime
-  console.log(`✅ MongoDB Atlas conectado (connect: ${connectTime}ms, total: ${totalTime}ms)`)
   return cachedDb
 }
 
@@ -432,104 +383,61 @@ export default async function handler(req, res) {
     }
 
     // ── GET /api/tours ────────────────────────────────────────────────────────
-    // Listado ULTRA optimizado: proyección MongoDB para NO traer campos pesados
+    // Listado optimizado: solo campos necesarios para tarjetas de tours
     if (req.method === 'GET' && url === '/api/tours') {
       try {
         // Agregar caché de 5 minutos para reducir tráfico
         res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
         
-        let tours = []
-        let retries = 3
-        let lastError = null
+        const db = await getDb()
         
-        // Reintentar hasta 3 veces si falla la conexión
-        for (let attempt = 1; attempt <= retries; attempt++) {
-          try {
-            console.log(`📡 Intento ${attempt}/${retries} de conectar a MongoDB...`)
-            const dbStart = Date.now()
-            const db = await getDb()
-            const dbTime = Date.now() - dbStart
-            console.log(`⏱️ getDb() tardó: ${dbTime}ms`)
-            
-            // PROYECCIÓN: Solo traer campos livianos, EXCLUIR campos pesados
-            const projection = {
-              _id: 1,
-              id: 1,
-              name: 1,
-              location: 1,
-              region: 1,
-              price: 1,
-              priceValue: 1,
-              days: 1,
-              tag: 1,
-              rating: 1,
-              reviewCount: 1,
-              groupSize: 1,
-              disabled: 1,
-              availableDates: 1,
-              priceOptions: 1,
-              seasons: 1,
-              image: 1,  // Solo la imagen de portada
-              // EXCLUIR (no poner en proyección):
-              // - images (galería completa)
-              // - itinerary (itinerario detallado)
-              // - brochure (PDF Base64)
-              // - tourTerms (términos largos)
-              // - description (descripciones largas)
-              // - included/notIncluded (listas largas)
-            }
-            
-            const queryStart = Date.now()
-            tours = await db.collection('tours')
-              .find({}, { projection })
-              .sort({ createdAt: -1 })
-              .toArray()
-            const queryTime = Date.now() - queryStart
-              
-            console.log(`✅ ${tours.length} tours obtenidos (query: ${queryTime}ms, solo campos básicos)`)
-            break // Éxito, salir del loop
-            
-          } catch (error) {
-            lastError = error
-            console.error(`❌ Intento ${attempt} falló:`, error.message)
-            
-            if (attempt < retries) {
-              // Esperar 1 segundo antes de reintentar
-              await new Promise(resolve => setTimeout(resolve, 1000))
-              // Resetear cache para forzar reconexión
-              cachedDb = null
-              cachedClient = null
-            }
-          }
-        }
-        
-        // Si después de 3 intentos sigue fallando, devolver error
-        if (tours.length === 0 && lastError) {
-          throw lastError
-        }
-        
-        // Filtrar Base64 de la imagen de portada
-        const optimizedTours = tours.map(tour => {
-          const hasBase64 = tour.image?.startsWith('data:image/')
+        // Proyección: solo campos necesarios para el listado
+        const tours = await db.collection('tours').find({}).project({
+          // Campos esenciales para tarjetas
+          id: 1,
+          name: 1,
+          location: 1,
+          region: 1,
+          price: 1,
+          priceValue: 1,
+          days: 1,
+          tag: 1,
+          image: 1,  // Solo portada
+          rating: 1,
+          reviewCount: 1,
+          groupSize: 1,
+          disabled: 1,
+          availableDates: 1,
+          priceOptions: 1,
+          seasons: 1,
           
-          return {
-            ...tour,
-            // Reemplazar Base64 > 5KB por placeholder
-            image: hasBase64 && tour.image.length > 5000
-              ? '/placeholder.jpg'
-              : tour.image,
-            // Flag para migración
-            _hasBase64: hasBase64,
-          }
-        })
+          // EXCLUIR campos pesados
+          images: 0,        // Galería completa NO
+          itinerary: 0,     // Itinerario completo NO
+          brochure: 0,      // PDF NO (se obtiene en detalle)
+          includes: 0,      // Listas largas NO
+          notIncludes: 0,
+          notes: 0,
+          recommendations: 0,
+          tourTerms: 0      // Términos largos NO
+        }).sort({ createdAt: -1 }).toArray()
         
-        const totalSize = JSON.stringify(optimizedTours).length
-        console.log(`📦 GET /api/tours - ${optimizedTours.length} tours, ~${(totalSize / 1024).toFixed(1)} KB`)
+        // Optimizar image: si es Base64, MOSTRAR IGUAL (sin filtrar)
+        // ⚠️ MODO RECUPERACIÓN: muestra Base64 para que veas los tours
+        const optimizedTours = tours.map(tour => ({
+          ...tour,
+          // Truncar Base64 extremadamente largos (más de 50KB)
+          image: tour.image?.startsWith('data:image/') && tour.image.length > 50000
+            ? tour.image.substring(0, 50000) + '...[truncated]'
+            : tour.image,
+          // Flag para que el admin sepa que tiene Base64
+          _hasBase64: tour.image?.startsWith('data:image/') || false
+        }))
         
+        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (MODO RECUPERACIÓN - con Base64 truncado)`)
         return json(res, 200, { ok: true, tours: optimizedTours })
-        
       } catch (error) {
-        console.error('❌ Error en /api/tours después de reintentos:', error)
+        console.error('❌ Error en /api/tours:', error)
         return json(res, 500, { 
           ok: false, 
           error: 'Error al cargar tours desde MongoDB',
@@ -561,7 +469,7 @@ export default async function handler(req, res) {
         
         // Optimizar imágenes Base64 incluso en detalle
         if (tour.image?.startsWith('data:image/')) {
-          tour.image = '/placeholder.jpg'
+          tour.image = '/placeholder-tour.jpg'
           tour._hasBase64Image = true  // Flag para el admin
         }
         
