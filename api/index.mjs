@@ -465,12 +465,13 @@ export default async function handler(req, res) {
           priceOptions: tour.priceOptions,
           seasons: tour.seasons,
           
-          // Optimizar imagen: truncar Base64 si es muy grande
-          image: tour.image?.startsWith('data:image/') && tour.image.length > 50000
-            ? tour.image.substring(0, 50000) + '...[truncated]'
+          // OPTIMIZACIÓN AGRESIVA: truncar Base64 a 5KB (antes 50KB)
+          // Esto permite cargar todos los tours sin timeout
+          image: tour.image?.startsWith('data:image/') && tour.image.length > 5000
+            ? '/placeholder-tour.jpg'  // Reemplazar directamente por placeholder
             : tour.image,
           
-          // Flag para identificar tours con Base64
+          // Flag para identificar tours con Base64 (para migración)
           _hasBase64: tour.image?.startsWith('data:image/') || false,
         }))
         
