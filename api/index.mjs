@@ -10,7 +10,7 @@ let cachedClient = null
 async function getDb() {
   if (cachedDb && cachedClient) {
     try {
-      // Verificar que la conexión sigue activa
+      // Verificar que la conexión sigue activa con ping rápido
       await cachedClient.db().admin().ping()
       return cachedDb
     } catch (error) {
@@ -20,25 +20,43 @@ async function getDb() {
     }
   }
   
-  if (!MONGODB_URI) throw new Error('MONGODB_URI no configurado')
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI no configurado')
+  }
   
-  console.log('🔌 Conectando a MongoDB...')
+  // Validar que sea mongodb+srv:// (formato recomendado)
+  if (!MONGODB_URI.startsWith('mongodb+srv://') && !MONGODB_URI.startsWith('mongodb://')) {
+    throw new Error('MONGODB_URI debe comenzar con mongodb+srv:// o mongodb://')
+  }
+  
+  console.log('🔌 Conectando a MongoDB Atlas...')
+  
   const client = new MongoClient(MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000,  // 30 segundos (antes 8)
-    connectTimeoutMS: 30000,          // 30 segundos (antes 8)
-    socketTimeoutMS: 30000,           // 30 segundos timeout de socket
-    maxPoolSize: 10,                  // Máximo 10 conexiones
-    minPoolSize: 2,                   // Mínimo 2 conexiones
-    maxIdleTimeMS: 60000,             // Cerrar conexiones inactivas después de 1 min
-    retryWrites: true,
-    retryReads: true,
+    // Timeouts optimizados para Vercel Serverless
+    serverSelectionTimeoutMS: 10000,  // 10 segundos (reducido de 30s)
+    connectTimeoutMS: 10000,          // 10 segundos para conectar
+    socketTimeoutMS: 45000,           // 45 segundos para operaciones
+    
+    // Pool de conexiones para serverless
+    maxPoolSize: 10,                  // Máximo 10 conexiones simultáneas
+    minPoolSize: 1,                   // Mínimo 1 (serverless puede escalar a 0)
+    maxIdleTimeMS: 10000,             // Cerrar conexiones inactivas tras 10s
+    
+    // Opciones de resiliencia
+    retryWrites: true,                // Reintentar escrituras automáticamente
+    retryReads: true,                 // Reintentar lecturas automáticamente
+    
+    // TLS/SSL (obligatorio para Atlas)
     tls: true,
+    
+    // Compresión para reducir transferencia
+    compressors: ['zlib'],
   })
   
   await client.connect()
   cachedClient = client
   cachedDb = client.db('peruintravel')
-  console.log('✅ MongoDB conectado')
+  console.log('✅ MongoDB Atlas conectado')
   return cachedDb
 }
 
