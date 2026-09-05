@@ -411,9 +411,6 @@ export default async function handler(req, res) {
           priceOptions: 1,
           seasons: 1,
           // NO agregar exclusiones (images: 0, etc) - simplemente no incluir
-        }).toArray()
-          recommendations: 0,
-          tourTerms: 0      // Términos largos NO
         }).sort({ createdAt: -1 }).toArray()
         
         // Optimizar image: si es Base64, MOSTRAR IGUAL (sin filtrar)
