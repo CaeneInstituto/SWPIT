@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { tours, type Tour, type DayItinerary, type Activity } from '../data/tours'
+import { STANDARD_TOUR_TERMS } from '../data/standardTerms'
 import { normalizeToTime24, normalizeActivities } from '../utils/timeFormat'
 import { 
   Plus, Edit2, Trash2, Eye, EyeOff, LogOut, Save, X, 
   Package, DollarSign, MapPin, Clock, Image as ImageIcon,
   Sun, Snowflake, Leaf, Calendar as CalendarIcon, Percent, Tag,
-  MessageSquare, Database, ShoppingCart, Download
+  MessageSquare, Database, ShoppingCart, Download, ChevronDown
 } from 'lucide-react'
 
 // API Helpers
@@ -332,8 +333,10 @@ export default function AdminDashboard() {
 
   const saveTours = async (newTours: Tour[]) => {
     // Normalizar todas las horas a formato 24h antes de guardar
+    // Y asegurar que todos los tours tengan los términos estándar
     const normalizedTours = newTours.map(tour => ({
       ...tour,
+      terms: STANDARD_TOUR_TERMS, // ✅ Siempre usar términos estándar
       itinerary: (tour.itinerary || []).map(day => ({
         ...day,
         activities: normalizeActivities(day.activities || [])
@@ -2865,49 +2868,45 @@ function AdvancedDetailsForm({ formData, setFormData, addToArray, removeFromArra
 
       {/* Términos y Condiciones */}
       <div className="border-t pt-6">
-        <h4 className="text-md font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h4 className="text-md font-bold text-gray-900 mb-3 flex items-center gap-2">
           📋 Términos y Condiciones
         </h4>
-        <div className="space-y-2">
-          {(formData.terms || []).map((term, i) => (
-            <div key={i} className="flex items-start gap-2 bg-gray-50 px-3 py-2 rounded-lg">
-              <span className="text-xs font-bold text-gray-400 mt-1 shrink-0">{i + 1}.</span>
-              <input
-                type="text"
-                value={term}
-                onChange={(e) => {
-                  const updated = [...(formData.terms || [])]
-                  updated[i] = e.target.value
-                  setFormData({ ...formData, terms: updated })
-                }}
-                className="flex-1 bg-transparent focus:outline-none text-sm"
-                placeholder="Término o condición"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const updated = (formData.terms || []).filter((_, idx) => idx !== i)
-                  setFormData({ ...formData, terms: updated })
-                }}
-                className="text-red-500 hover:text-red-700 shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+        
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
+          <div className="flex items-start gap-2 mb-2">
+            <span className="text-2xl">ℹ️</span>
+            <div>
+              <p className="text-sm font-semibold text-blue-900 mb-1">
+                Términos estandarizados para todos los tours
+              </p>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                Todos los paquetes usan automáticamente los términos y condiciones estándar de la agencia. 
+                No es necesario agregarlos manualmente. Si necesitas modificarlos, edita el archivo 
+                <code className="bg-blue-100 px-1 py-0.5 rounded mx-1 font-mono text-xs">standardTerms.ts</code>
+              </p>
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              setFormData({
-                ...formData,
-                terms: [...(formData.terms || []), '']
-              })
-            }}
-            className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand-teal hover:text-brand-teal transition-colors text-sm font-semibold"
-          >
-            + Agregar término
-          </button>
+          </div>
         </div>
+
+        <details className="group">
+          <summary className="cursor-pointer list-none">
+            <div className="flex items-center justify-between bg-gray-50 hover:bg-gray-100 px-4 py-3 rounded-lg transition-colors">
+              <span className="text-sm font-semibold text-gray-700">
+                Ver términos y condiciones estándar ({STANDARD_TOUR_TERMS.length} términos)
+              </span>
+              <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
+            </div>
+          </summary>
+          
+          <div className="mt-3 space-y-2 max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-lg p-4">
+            {STANDARD_TOUR_TERMS.map((term, i) => (
+              <div key={i} className="flex items-start gap-3 text-sm">
+                <span className="font-bold text-gray-400 shrink-0 mt-0.5">{i + 1}.</span>
+                <p className="text-gray-700 leading-relaxed">{term}</p>
+              </div>
+            ))}
+          </div>
+        </details>
       </div>
     </div>
   )
