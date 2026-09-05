@@ -3516,16 +3516,26 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
 
       const reader = new FileReader()
       
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const base64 = e.target?.result as string
         
         if (type === 'pdf') {
           setFormData({ ...formData, brochure: base64 })
           setUploadProgress(`✅ PDF cargado: ${file.name}`)
         } else {
+          // Comprimir imagen si es muy grande
+          let finalBase64 = base64
+          
+          // Si la imagen base64 es mayor a 500KB, mostrar advertencia
+          const sizeInKB = (base64.length * 3) / 4 / 1024
+          if (sizeInKB > 500) {
+            console.warn(`Imagen grande detectada: ${sizeInKB.toFixed(0)}KB`)
+            setUploadProgress(`⚠️ Imagen grande (${sizeInKB.toFixed(0)}KB). Puede tardar en cargar.`)
+          }
+          
           setFormData(prev => {
             const currentImages = prev.images || []
-            return { ...prev, images: [...currentImages, base64] }
+            return { ...prev, images: [...currentImages, finalBase64] }
           })
           setUploadProgress(`✅ Imagen agregada: ${file.name}`)
         }
@@ -3783,26 +3793,41 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
                   {formData.images?.length || 0} imagen(es) en la galería
                 </p>
                 {(formData.images || []).map((img, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200">
-                    <img 
-                      src={img} 
-                      alt={`Preview ${i + 1}`} 
-                      className="w-16 h-16 object-cover rounded"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3E?%3C/text%3E%3C/svg%3E'
-                      }}
-                    />
+                  <div key={i} className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors">
+                    <div className="relative w-16 h-16 flex-shrink-0 bg-gray-50 rounded overflow-hidden">
+                      <img 
+                        src={img} 
+                        alt={`Imagen ${i + 1}`} 
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onLoad={(e) => {
+                          // Imagen cargada correctamente
+                          const container = (e.target as HTMLImageElement).parentElement
+                          if (container) container.style.backgroundColor = 'transparent'
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          const container = target.parentElement
+                          if (container) {
+                            container.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-red-50 border-2 border-dashed border-red-300 text-red-500 text-xs font-bold">❌</div>'
+                          }
+                          console.error('❌ Error cargando imagen:', img.substring(0, 80))
+                        }}
+                      />
+                    </div>
                     <input
                       type="text"
                       value={img.substring(0, 60)}
                       onChange={(e) => updateImage(i, e.target.value)}
                       className="flex-1 px-2 py-1 text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded border border-transparent hover:border-blue-200"
                       title={img}
+                      placeholder="URL o base64 de la imagen"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
                       className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
+                      title="Eliminar imagen"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

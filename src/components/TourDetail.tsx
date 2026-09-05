@@ -29,6 +29,52 @@ const activityIconMap: Record<NonNullable<Activity['icon']>, React.ReactNode> = 
   default:   <MapPin   className="w-3.5 h-3.5" />,
 }
 
+// ─── Package style helper ─────────────────────────────────────────────────────
+
+/**
+ * Determina el estilo visual de un paquete según su categoría
+ * - VIP/FULL → Azul
+ * - GOLD → Dorado/Amarillo
+ * - BASIC/otros → Blanco (default)
+ */
+const getPackageStyle = (label: string) => {
+  const labelUpper = label.toUpperCase()
+  
+  // VIP o FULL → Azul elegante
+  if (labelUpper.includes('VIP') || labelUpper.includes('FULL')) {
+    return {
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
+      border: 'border-blue-400',
+      labelText: 'text-blue-700 font-semibold',
+      priceText: 'text-blue-600',
+      noteText: 'text-blue-600/80',
+      shadow: 'shadow-lg shadow-blue-100'
+    }
+  }
+  
+  // GOLD → Dorado/Amarillo anaranjado
+  if (labelUpper.includes('GOLD')) {
+    return {
+      bg: 'bg-gradient-to-br from-amber-50 to-yellow-100',
+      border: 'border-amber-400',
+      labelText: 'text-amber-800 font-semibold',
+      priceText: 'text-amber-600',
+      noteText: 'text-amber-700/80',
+      shadow: 'shadow-lg shadow-amber-100'
+    }
+  }
+  
+  // BASIC o sin categoría → Blanco limpio (por defecto)
+  return {
+    bg: 'bg-white',
+    border: 'border-brand-teal/30',
+    labelText: 'text-gray-600',
+    priceText: 'text-brand-teal',
+    noteText: 'text-gray-500',
+    shadow: 'shadow-sm'
+  }
+}
+
 // ─── GalleryCarousel ──────────────────────────────────────────────────────────
 
 function GalleryCarousel({ images }: { images: string[] }) {
@@ -363,13 +409,27 @@ export default function TourDetail() {
           <div className="max-w-6xl mx-auto px-4 py-5">
             <p className="text-xs font-bold uppercase tracking-widest text-brand-teal mb-3">Precios por persona · Incluye transporte + tours + guiado</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {tour.priceOptions.map((opt) => (
-                <div key={opt.label} className="bg-white rounded-xl border border-brand-teal/30 p-4 text-center shadow-sm">
-                  <p className="text-xs text-gray-500 mb-1">{opt.label}</p>
-                  <p className="text-3xl font-extrabold text-brand-teal">{opt.price}</p>
-                  {opt.note && <p className="text-xs text-gray-400 mt-1 leading-tight">{opt.note}</p>}
-                </div>
-              ))}
+              {tour.priceOptions.map((opt) => {
+                const style = getPackageStyle(opt.label)
+                return (
+                  <div 
+                    key={opt.label} 
+                    className={`${style.bg} rounded-xl border-2 ${style.border} p-4 text-center ${style.shadow} transition-transform hover:scale-105`}
+                  >
+                    <p className={`text-xs uppercase tracking-wide mb-1 ${style.labelText}`}>
+                      {opt.label}
+                    </p>
+                    <p className={`text-3xl font-extrabold ${style.priceText}`}>
+                      {opt.price}
+                    </p>
+                    {opt.note && (
+                      <p className={`text-xs mt-2 leading-tight ${style.noteText}`}>
+                        {opt.note}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
