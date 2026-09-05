@@ -3476,13 +3476,12 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 bg-gray-50 rounded-lg" style={{ gridAutoRows: '80px' }}>
                     {availableImages.map((imagePath, idx) => (
-                      <div key={idx} className="relative w-full h-20 min-h-[80px] max-h-[80px] rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group bg-white" style={{ width: 'auto', maxWidth: '100%' }}>
+                      <div key={idx} className="relative w-full h-20 min-h-[80px] max-h-[80px] rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group bg-white">
                         <img
                           src={imagePath}
                           alt={`${selectedFolder} ${idx + 1}`}
                           className="absolute inset-0 w-full h-full object-cover"
                           loading="eager"
-                          style={{ maxHeight: '80px', maxWidth: '100%' }}
                           onLoad={(e) => {
                             const target = e.target as HTMLImageElement
                             console.log('✅ Imagen cargada correctamente:', imagePath)
