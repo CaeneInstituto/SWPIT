@@ -391,9 +391,9 @@ export default async function handler(req, res) {
         
         const db = await getDb()
         
-        // Proyección: solo campos necesarios para el listado
+        // Proyección: solo campos necesarios para el listado (SOLO INCLUSIÓN)
         const tours = await db.collection('tours').find({}).project({
-          // Campos esenciales para tarjetas
+          _id: 1,
           id: 1,
           name: 1,
           location: 1,
@@ -410,14 +410,8 @@ export default async function handler(req, res) {
           availableDates: 1,
           priceOptions: 1,
           seasons: 1,
-          
-          // EXCLUIR campos pesados
-          images: 0,        // Galería completa NO
-          itinerary: 0,     // Itinerario completo NO
-          brochure: 0,      // PDF NO (se obtiene en detalle)
-          includes: 0,      // Listas largas NO
-          notIncludes: 0,
-          notes: 0,
+          // NO agregar exclusiones (images: 0, etc) - simplemente no incluir
+        }).toArray()
           recommendations: 0,
           tourTerms: 0      // Términos largos NO
         }).sort({ createdAt: -1 }).toArray()
