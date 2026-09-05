@@ -67,6 +67,9 @@ export default function Destinations() {
         
         const data = await res.json()
         
+        // DEBUG: ver qué devuelve el API
+        console.log('📦 Respuesta API:', { ok: data.ok, toursLength: data.tours?.length, data })
+        
         if (data.ok && data.tours && data.tours.length > 0) {
           console.log(`✅ ${data.tours.length} tours cargados desde API`)
           setTourList(data.tours)
