@@ -75,11 +75,9 @@ export default function Destinations() {
     }
     
     loadTours()
-
-    // Refrescar cuando el usuario vuelve a la pestaña (por si agregó nuevos tours)
-    const onFocus = () => loadTours()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    
+    // ❌ REMOVIDO: No recargar en focus (causaba múltiples llamadas innecesarias)
+    // Ahora solo carga una vez al montar el componente
   }, [])
 
   const filtered = tourList.filter((t) => {
