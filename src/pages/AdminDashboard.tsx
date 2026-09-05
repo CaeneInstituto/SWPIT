@@ -3258,6 +3258,11 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
 
   // Detectar carpeta automáticamente desde imagen existente
   useEffect(() => {
+    // Ignorar imágenes en Base64
+    if (!formData.image || formData.image.startsWith('data:image/')) {
+      return
+    }
+    
     if (formData.image && !selectedFolder) {
       // Extraer nombre de carpeta desde la ruta de imagen
       // Ejemplo: "/Autisha/DSC_0365332.jpg" -> "Autisha"
@@ -3269,7 +3274,7 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
         setSelectedFolder(detectedFolder)
         loadImagesFromFolder(detectedFolder)
       } else {
-        console.warn('⚠️ No se pudo extraer carpeta de:', formData.image)
+        console.warn('⚠️ No se pudo extraer carpeta de la ruta')
       }
     }
   }, [formData.image])
@@ -3533,16 +3538,20 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
           {formData.image && (
             <div className="mt-4 bg-purple-100 border border-purple-300 rounded-lg p-3">
               <p className="text-xs font-bold text-purple-800 mb-2">✅ Portada seleccionada:</p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <img 
                   src={formData.image} 
                   alt="Portada" 
-                  className="w-16 h-16 object-cover rounded border-2 border-purple-400"
+                  className="w-16 h-16 object-cover rounded border-2 border-purple-400 shrink-0"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect fill="%23ddd" width="64" height="64"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3E?%3C/text%3E%3C/svg%3E'
                   }}
                 />
-                <p className="text-xs text-purple-700 font-mono">{formData.image}</p>
+                <p className="text-xs text-purple-700 font-mono truncate min-w-0 flex-1">
+                  {formData.image.startsWith('data:image/')
+                    ? '📦 Imagen almacenada en Base64'
+                    : formData.image}
+                </p>
               </div>
             </div>
           )}

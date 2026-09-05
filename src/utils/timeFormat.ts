@@ -13,7 +13,8 @@
  * - "1:30" → "01:30" (sin am/pm asume formato 24h)
  */
 export function normalizeToTime24(time: string): string {
-  if (!time || time.trim() === '') return '--:--'
+  // Aceptar valores vacíos o placeholders sin generar warning
+  if (!time || time.trim() === '' || time === '--:--') return '--:--'
   
   const cleaned = time.trim().toLowerCase()
   
@@ -32,7 +33,10 @@ export function normalizeToTime24(time: string): string {
       const [, hours, minutes] = simpleMatch
       return `${hours.padStart(2, '0')}:${minutes}`
     }
-    console.warn('Invalid time format:', time)
+    // Solo advertir si no es un placeholder conocido
+    if (time !== '--:--') {
+      console.warn('Invalid time format:', time)
+    }
     return '--:--'
   }
   
@@ -63,7 +67,8 @@ export function normalizeToTime24(time: string): string {
  * - Formatos descriptivos como "Mañana", "Tarde" → se devuelven tal como están
  */
 export function formatToTime12(time24: string): string {
-  if (!time24 || time24.trim() === '') return '--:--'
+  // Aceptar valores vacíos o placeholders sin generar warning
+  if (!time24 || time24.trim() === '' || time24 === '--:--') return '--:--'
   
   const cleaned = time24.trim()
   
