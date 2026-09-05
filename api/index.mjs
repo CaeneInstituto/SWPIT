@@ -516,7 +516,7 @@ export default async function handler(req, res) {
             ...tour,
             // Reemplazar Base64 > 5KB por placeholder
             image: hasBase64 && tour.image.length > 5000
-              ? '/placeholder-tour.jpg'
+              ? '/placeholder.jpg'
               : tour.image,
             // Flag para migración
             _hasBase64: hasBase64,
@@ -561,7 +561,7 @@ export default async function handler(req, res) {
         
         // Optimizar imágenes Base64 incluso en detalle
         if (tour.image?.startsWith('data:image/')) {
-          tour.image = '/placeholder-tour.jpg'
+          tour.image = '/placeholder.jpg'
           tour._hasBase64Image = true  // Flag para el admin
         }
         
