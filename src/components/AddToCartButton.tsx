@@ -61,15 +61,32 @@ function isDateAvailable(dateStr: string, tour: Tour): boolean {
 /** Calcula el primer mes a mostrar (mes del primer día disponible desde hoy) */
 function getInitialMonth(tour: Tour): { year: number; month: number } {
   const today = new Date()
-  // Buscar el próximo día disponible en los próximos 90 días
-  for (let i = 1; i <= 90; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    const iso = d.toISOString().split('T')[0]
-    if (isDateAvailable(iso, tour)) {
-      return { year: d.getFullYear(), month: d.getMonth() }
+  const ad = tour.availableDates
+  
+  // Si hay fechas específicas, usar la más cercana
+  if (ad?.specificDates?.length) {
+    const sortedDates = [...ad.specificDates].sort()
+    for (const dateStr of sortedDates) {
+      const d = new Date(dateStr + 'T12:00:00')
+      if (d > today) {
+        return { year: d.getFullYear(), month: d.getMonth() }
+      }
     }
   }
+  
+  // Si hay días de la semana, buscar el próximo disponible en los próximos 180 días
+  if (ad?.weekDays?.length) {
+    for (let i = 1; i <= 180; i++) {
+      const d = new Date(today)
+      d.setDate(today.getDate() + i)
+      const iso = d.toISOString().split('T')[0]
+      if (isDateAvailable(iso, tour)) {
+        return { year: d.getFullYear(), month: d.getMonth() }
+      }
+    }
+  }
+  
+  // Sin configuración o sin fechas futuras, usar mes actual
   return { year: today.getFullYear(), month: today.getMonth() }
 }
 
