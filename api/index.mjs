@@ -9,11 +9,18 @@ let cachedDb = null
 async function getDb() {
   if (cachedDb) return cachedDb
   if (!MONGODB_URI) throw new Error('MONGODB_URI no configurado')
+  
   const client = new MongoClient(MONGODB_URI, {
-    serverSelectionTimeoutMS: 8000,
-    connectTimeoutMS: 8000,
+    serverSelectionTimeoutMS: 30000,  // 30s para primera conexión
+    connectTimeoutMS: 30000,
+    socketTimeoutMS: 45000,           // 45s para queries
+    maxPoolSize: 10,                   // Pool de conexiones
+    minPoolSize: 1,
+    retryWrites: true,
+    retryReads: true,
     tls: true,
   })
+  
   await client.connect()
   cachedDb = client.db('peruintravel')
   return cachedDb
