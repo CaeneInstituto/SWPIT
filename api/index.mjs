@@ -27,14 +27,8 @@ async function getDb() {
     throw new Error('MONGODB_URI no configurado en variables de entorno')
   }
 
-  // Validar que sea mongodb+srv (no IPs directas)
-  if (!MONGODB_URI.startsWith('mongodb+srv://')) {
-    console.error('❌ MONGODB_URI debe usar formato mongodb+srv://')
-    throw new Error('MONGODB_URI debe usar mongodb+srv:// (no IPs directas)')
-  }
-
   try {
-    // Crear nuevo cliente
+    // Crear nuevo cliente (acepta mongodb:// o mongodb+srv://)
     const client = new MongoClient(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,  // 10s para selección de servidor
       connectTimeoutMS: 10000,          // 10s para conexión inicial
