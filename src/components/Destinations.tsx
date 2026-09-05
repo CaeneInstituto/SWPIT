@@ -54,15 +54,8 @@ export default function Destinations() {
         console.log('🚀 Iniciando carga de tours desde API...')
         const startTime = Date.now()
         
-        // Timeout de 15 segundos (diagnóstico temporal; idealmente la API debe responder mucho antes)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const res = await fetch(`${API_URL}/api/tours`)
         
-        const res = await fetch(`${API_URL}/api/tours`, {
-          signal: controller.signal
-        })
-        
-        clearTimeout(timeoutId)
         const loadTime = Date.now() - startTime
         console.log(`⏱️ API respondió en ${loadTime}ms`)
         
@@ -82,11 +75,7 @@ export default function Destinations() {
           setTourList(tours)
         }
       } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.error('⏱️ Timeout: API tardó >15s, usando datos locales')
-        } else {
-          console.error('❌ Error loading tours from API:', error)
-        }
+        console.error('❌ Error loading tours from API:', error)
         // Fallback a datos locales inmediatamente
         setTourList(tours)
       } finally {
