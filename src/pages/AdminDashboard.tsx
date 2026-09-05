@@ -207,12 +207,6 @@ async function fetchTours(): Promise<Tour[]> {
 }
 
 async function saveTourToAPI(tour: Tour): Promise<boolean> {
-  if (!API_URL) {
-    console.error('❌ API_URL is not defined!')
-    alert('❌ Error: API_URL no está configurado')
-    return false
-  }
-  
   try {
     const method = tour._id ? 'PUT' : 'POST'
     const url = tour._id ? `${API_URL}/api/tours/${tour.id}` : `${API_URL}/api/tours`
