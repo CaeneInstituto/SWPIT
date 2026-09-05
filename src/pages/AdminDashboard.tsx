@@ -365,6 +365,57 @@ export default function AdminDashboard() {
     }
   }
 
+  // Función para actualizar términos de TODOS los tours existentes
+  const migrateAllTerms = async () => {
+    const confirmed = window.confirm(
+      `¿Actualizar términos de TODOS los tours en MongoDB?\n\n` +
+      `Esto aplicará los 21 términos estándar a todos los ${tourList.length} tours.\n\n` +
+      `⚠️ Los términos antiguos serán reemplazados.`
+    )
+    
+    if (!confirmed) return
+
+    console.log('🔄 Iniciando migración de términos...')
+
+    try {
+      let updated = 0
+      let failed = 0
+
+      for (const tour of tourList) {
+        // Actualizar tour con términos estándar
+        const tourWithNewTerms = {
+          ...tour,
+          terms: STANDARD_TOUR_TERMS
+        }
+
+        const success = await saveTourToAPI(tourWithNewTerms)
+        if (success) {
+          updated++
+          console.log(`✅ ${tour.name} - términos actualizados`)
+        } else {
+          failed++
+          console.error(`❌ ${tour.name} - error al actualizar`)
+        }
+      }
+
+      // Recargar tours actualizados
+      const refreshedTours = await fetchTours()
+      setTourList(refreshedTours)
+
+      alert(
+        `✅ Migración completada\n\n` +
+        `Tours actualizados: ${updated}\n` +
+        `Errores: ${failed}\n\n` +
+        `Todos los tours ahora tienen los 21 términos estándar.`
+      )
+      
+      console.log('✅ Migración de términos completada')
+    } catch (error) {
+      console.error('❌ Error durante migración:', error)
+      alert('❌ Error durante la migración. Revisa la consola.')
+    }
+  }
+
   const toggleTourStatus = (tourId: string) => {
     const updatedTours = tourList.map(tour =>
       tour.id === tourId ? { ...tour, disabled: !tour.disabled } : tour
@@ -705,6 +756,16 @@ export default function AdminDashboard() {
               >
                 <Database className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Migrar originales</span>
+              </button>
+            )}
+            {activeTab === 'tours' && tourList.length > 0 && (
+              <button
+                onClick={migrateAllTerms}
+                className="flex items-center gap-2 px-4 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
+                title="Actualizar términos de todos los tours"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Actualizar términos</span>
               </button>
             )}
             <button
