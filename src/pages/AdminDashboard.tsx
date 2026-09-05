@@ -3445,9 +3445,9 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                     Haz clic en una imagen para establecerla como portada o agregarla al carrusel
                   </p>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 bg-gray-50 rounded-lg">
                     {availableImages.map((imagePath, idx) => (
-                      <div key={idx} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group">
+                      <div key={idx} className="relative w-full h-20 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group flex-shrink-0">
                         <img
                           src={imagePath}
                           alt={`${selectedFolder} ${idx + 1}`}
@@ -3466,11 +3466,11 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                             console.error('❌ Error cargando:', imagePath)
                           }}
                         />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
                           <button
                             type="button"
                             onClick={() => setAsCoverImage(imagePath)}
-                            className="w-full px-3 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600 transition-colors shadow-lg"
+                            className="w-full px-2 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded hover:bg-purple-600 transition-colors shadow-lg"
                             title="Establecer como portada"
                           >
                             📸 Portada
@@ -3478,7 +3478,7 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                           <button
                             type="button"
                             onClick={() => addToGallery(imagePath)}
-                            className="w-full px-3 py-1.5 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600 transition-colors shadow-lg"
+                            className="w-full px-2 py-1 bg-blue-500 text-white text-[10px] font-semibold rounded hover:bg-blue-600 transition-colors shadow-lg"
                             title="Agregar al carrusel"
                           >
                             ➕ Carrusel
