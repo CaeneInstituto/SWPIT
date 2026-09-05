@@ -3448,19 +3448,26 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
                     {availableImages.map((imagePath, idx) => (
                       <div key={idx} className="relative group">
-                        <img
-                          src={imagePath}
-                          alt={`${selectedFolder} ${idx + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-green-500 transition-all cursor-pointer"
-                          onError={(e) => {
-                            // Si la imagen no existe, ocultarla
-                            (e.target as HTMLElement).style.display = 'none'
-                          }}
-                          onLoad={(e) => {
-                            // Si la imagen carga, mostrarla
-                            (e.target as HTMLElement).style.display = 'block'
-                          }}
-                        />
+                        <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={imagePath}
+                            alt={`${selectedFolder} ${idx + 1}`}
+                            className="w-full h-full object-cover border-2 border-gray-200 group-hover:border-green-500 transition-all cursor-pointer"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              const container = target.parentElement
+                              if (container) {
+                                container.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-red-50 text-red-500 text-xs">❌ Error</div>'
+                              }
+                              console.error('❌ Error cargando imagen:', imagePath)
+                            }}
+                            onLoad={(e) => {
+                              const container = (e.target as HTMLImageElement).parentElement
+                              if (container) container.style.backgroundColor = 'transparent'
+                            }}
+                          />
+                        </div>
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-1 p-1">
                           <button
                             type="button"
