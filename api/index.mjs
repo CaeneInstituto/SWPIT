@@ -4,26 +4,65 @@ const CULQI_SECRET_KEY = process.env.CULQI_SECRET_KEY || ''
 const MONGODB_URI      = process.env.MONGODB_URI      || ''
 
 // ── MongoDB (conexión cacheada entre invocaciones) ────────────────────────────
+let cachedClient = null
 let cachedDb = null
 
 async function getDb() {
-  if (cachedDb) return cachedDb
-  if (!MONGODB_URI) throw new Error('MONGODB_URI no configurado')
-  
-  const client = new MongoClient(MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000,  // 30s para primera conexión
-    connectTimeoutMS: 30000,
-    socketTimeoutMS: 45000,           // 45s para queries
-    maxPoolSize: 10,                   // Pool de conexiones
-    minPoolSize: 1,
-    retryWrites: true,
-    retryReads: true,
-    tls: true,
-  })
-  
-  await client.connect()
-  cachedDb = client.db('peruintravel')
-  return cachedDb
+  // Si ya tenemos conexión cacheada, reutilizarla
+  if (cachedDb && cachedClient) {
+    try {
+      // Verificar que la conexión sigue activa
+      await cachedClient.db('admin').command({ ping: 1 })
+      return cachedDb
+    } catch (error) {
+      // Conexión muerta, limpiar cache
+      console.warn('⚠️ Conexión MongoDB expirada, reconectando...')
+      cachedClient = null
+      cachedDb = null
+    }
+  }
+
+  // Validar que MONGODB_URI esté configurado
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI no configurado en variables de entorno')
+  }
+
+  // Validar que sea mongodb+srv (no IPs directas)
+  if (!MONGODB_URI.startsWith('mongodb+srv://')) {
+    console.error('❌ MONGODB_URI debe usar formato mongodb+srv://')
+    throw new Error('MONGODB_URI debe usar mongodb+srv:// (no IPs directas)')
+  }
+
+  try {
+    // Crear nuevo cliente
+    const client = new MongoClient(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,  // 10s para selección de servidor
+      connectTimeoutMS: 10000,          // 10s para conexión inicial
+      socketTimeoutMS: 45000,           // 45s para operaciones
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      retryWrites: true,
+      retryReads: true,
+    })
+
+    // Conectar
+    await client.connect()
+    
+    // Cachear cliente y DB
+    cachedClient = client
+    cachedDb = client.db('peruintravel')
+    
+    console.log('✅ MongoDB conectado exitosamente')
+    return cachedDb
+    
+  } catch (error) {
+    // Limpiar cache si falla la conexión
+    cachedClient = null
+    cachedDb = null
+    
+    console.error('❌ Error conectando a MongoDB:', error.message)
+    throw new Error('No se pudo conectar a MongoDB. Verifica MONGODB_URI en Vercel.')
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
