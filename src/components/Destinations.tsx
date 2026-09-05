@@ -54,9 +54,10 @@ export default function Destinations() {
         console.log('🚀 Iniciando carga de tours desde API...')
         const startTime = Date.now()
         
-        // Timeout de 8 segundos (si MongoDB no responde, usar fallback)
+        // Timeout de 15 segundos TEMPORAL para diagnóstico (antes 8s)
+        // TODO: Reducir a 5s cuando MongoDB responda rápido
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 8000)
+        const timeoutId = setTimeout(() => controller.abort(), 15000)
         
         const res = await fetch(`${API_URL}/api/tours`, {
           signal: controller.signal

@@ -8,10 +8,15 @@ let cachedDb = null
 let cachedClient = null
 
 async function getDb() {
+  const startTime = Date.now()
+  
   if (cachedDb && cachedClient) {
     try {
       // Verificar que la conexión sigue activa con ping rápido
+      const pingStart = Date.now()
       await cachedClient.db().admin().ping()
+      const pingTime = Date.now() - pingStart
+      console.log(`✅ Conexión cacheada válida (ping: ${pingTime}ms)`)
       return cachedDb
     } catch (error) {
       console.log('⚠️ Conexión MongoDB perdida, reconectando...')
@@ -30,6 +35,7 @@ async function getDb() {
   }
   
   console.log('🔌 Conectando a MongoDB Atlas...')
+  const connectStart = Date.now()
   
   const client = new MongoClient(MONGODB_URI, {
     // Timeouts optimizados para Vercel Serverless
@@ -54,9 +60,11 @@ async function getDb() {
   })
   
   await client.connect()
+  const connectTime = Date.now() - connectStart
   cachedClient = client
   cachedDb = client.db('peruintravel')
-  console.log('✅ MongoDB Atlas conectado')
+  const totalTime = Date.now() - startTime
+  console.log(`✅ MongoDB Atlas conectado (connect: ${connectTime}ms, total: ${totalTime}ms)`)
   return cachedDb
 }
 
@@ -438,7 +446,10 @@ export default async function handler(req, res) {
         for (let attempt = 1; attempt <= retries; attempt++) {
           try {
             console.log(`📡 Intento ${attempt}/${retries} de conectar a MongoDB...`)
+            const dbStart = Date.now()
             const db = await getDb()
+            const dbTime = Date.now() - dbStart
+            console.log(`⏱️ getDb() tardó: ${dbTime}ms`)
             
             // PROYECCIÓN: Solo traer campos livianos, EXCLUIR campos pesados
             const projection = {
@@ -468,12 +479,14 @@ export default async function handler(req, res) {
               // - included/notIncluded (listas largas)
             }
             
+            const queryStart = Date.now()
             tours = await db.collection('tours')
               .find({}, { projection })
               .sort({ createdAt: -1 })
               .toArray()
+            const queryTime = Date.now() - queryStart
               
-            console.log(`✅ ${tours.length} tours obtenidos (solo campos básicos)`)
+            console.log(`✅ ${tours.length} tours obtenidos (query: ${queryTime}ms, solo campos básicos)`)
             break // Éxito, salir del loop
             
           } catch (error) {
