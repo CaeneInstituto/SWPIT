@@ -5,17 +5,40 @@ const MONGODB_URI      = process.env.MONGODB_URI      || ''
 
 // ── MongoDB (conexión cacheada entre invocaciones) ────────────────────────────
 let cachedDb = null
+let cachedClient = null
 
 async function getDb() {
-  if (cachedDb) return cachedDb
+  if (cachedDb && cachedClient) {
+    try {
+      // Verificar que la conexión sigue activa
+      await cachedClient.db().admin().ping()
+      return cachedDb
+    } catch (error) {
+      console.log('⚠️ Conexión MongoDB perdida, reconectando...')
+      cachedDb = null
+      cachedClient = null
+    }
+  }
+  
   if (!MONGODB_URI) throw new Error('MONGODB_URI no configurado')
+  
+  console.log('🔌 Conectando a MongoDB...')
   const client = new MongoClient(MONGODB_URI, {
-    serverSelectionTimeoutMS: 8000,
-    connectTimeoutMS: 8000,
+    serverSelectionTimeoutMS: 30000,  // 30 segundos (antes 8)
+    connectTimeoutMS: 30000,          // 30 segundos (antes 8)
+    socketTimeoutMS: 30000,           // 30 segundos timeout de socket
+    maxPoolSize: 10,                  // Máximo 10 conexiones
+    minPoolSize: 2,                   // Mínimo 2 conexiones
+    maxIdleTimeMS: 60000,             // Cerrar conexiones inactivas después de 1 min
+    retryWrites: true,
+    retryReads: true,
     tls: true,
   })
+  
   await client.connect()
+  cachedClient = client
   cachedDb = client.db('peruintravel')
+  console.log('✅ MongoDB conectado')
   return cachedDb
 }
 
@@ -389,10 +412,39 @@ export default async function handler(req, res) {
         // Agregar caché de 5 minutos para reducir tráfico
         res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
         
-        const db = await getDb()
+        let tours = []
+        let retries = 3
+        let lastError = null
         
-        // Obtener todos los tours sin proyección (MongoDB no permite mezclar inclusión/exclusión)
-        const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
+        // Reintentar hasta 3 veces si falla la conexión
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            console.log(`📡 Intento ${attempt}/${retries} de conectar a MongoDB...`)
+            const db = await getDb()
+            
+            // Obtener todos los tours sin proyección
+            tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
+            console.log(`✅ ${tours.length} tours obtenidos de MongoDB`)
+            break // Éxito, salir del loop
+            
+          } catch (error) {
+            lastError = error
+            console.error(`❌ Intento ${attempt} falló:`, error.message)
+            
+            if (attempt < retries) {
+              // Esperar 1 segundo antes de reintentar
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              // Resetear cache para forzar reconexión
+              cachedDb = null
+              cachedClient = null
+            }
+          }
+        }
+        
+        // Si después de 3 intentos sigue fallando, devolver error
+        if (tours.length === 0 && lastError) {
+          throw lastError
+        }
         
         // Filtrar campos manualmente en JavaScript
         const optimizedTours = tours.map(tour => ({
@@ -420,15 +472,13 @@ export default async function handler(req, res) {
           
           // Flag para identificar tours con Base64
           _hasBase64: tour.image?.startsWith('data:image/') || false,
-          
-          // NO incluir campos pesados:
-          // images, itinerary, brochure, includes, notIncludes, notes, recommendations, tourTerms
         }))
         
-        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (MODO RECUPERACIÓN - filtrado manual)`)
+        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours`)
         return json(res, 200, { ok: true, tours: optimizedTours })
+        
       } catch (error) {
-        console.error('❌ Error en /api/tours:', error)
+        console.error('❌ Error en /api/tours después de reintentos:', error)
         return json(res, 500, { 
           ok: false, 
           error: 'Error al cargar tours desde MongoDB',
