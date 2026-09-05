@@ -3265,19 +3265,43 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
       if (match && match[1]) {
         const detectedFolder = match[1]
         console.log('🔍 Carpeta detectada desde imagen existente:', detectedFolder)
+        console.log('📸 Imagen completa:', formData.image)
         setSelectedFolder(detectedFolder)
         loadImagesFromFolder(detectedFolder)
+      } else {
+        console.warn('⚠️ No se pudo extraer carpeta de:', formData.image)
       }
     }
   }, [formData.image])
 
   // Cargar imágenes de una carpeta
   const loadImagesFromFolder = async (folder: string) => {
+    console.log('📁 Iniciando carga de imágenes para carpeta:', folder)
     setLoading(true)
     try {
-      // Intentar cargar un índice de imágenes conocidas
-      // Como no podemos escanear directorios en el navegador, 
-      // vamos a intentar cargar imágenes con nombres comunes
+      // Cargar la lista real si existe un manifest
+      const manifestPath = `/${folder}/manifest.json`
+      console.log('🔎 Intentando cargar manifest:', manifestPath)
+      
+      try {
+        const response = await fetch(manifestPath)
+        console.log('📡 Response manifest:', response.status, response.ok)
+        
+        if (response.ok) {
+          const manifest = await response.json()
+          console.log('✅ Manifest cargado:', manifest)
+          const imagePaths = manifest.images.map((img: string) => `/${folder}/${img}`)
+          console.log('🖼️ Rutas de imágenes generadas:', imagePaths)
+          setAvailableImages(imagePaths)
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        console.error('❌ Error cargando manifest:', e)
+      }
+
+      // Si no hay manifest, generar rutas probables
+      console.log('⚠️ No hay manifest, generando rutas probables...')
       const commonExtensions = ['jpg', 'jpeg', 'JPG', 'JPEG', 'png', 'PNG']
       const commonNames = Array.from({ length: 30 }, (_, i) => i + 1)
       
@@ -3293,36 +3317,26 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
 
       // También intentar algunos patrones comunes de nombres
       const patterns = [
-        'DSC_', 'IMG_', 'PXL_', 'G0', 'photo', 'image',
+        'DSC_', 'IMG_', 'PXL_', 'G0', 'GH', 'photo', 'image',
         '332366821_', // Ejemplo de AyacuchoSemanaSanta
       ]
 
       for (let pattern of patterns) {
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 30; i++) {
           for (let ext of commonExtensions) {
             possibleImages.push(`/${folder}/${pattern}${String(i).padStart(4, '0')}.${ext}`)
+            // También sin padding para números como DSC_0365332
+            possibleImages.push(`/${folder}/${pattern}${i}.${ext}`)
+            possibleImages.push(`/${folder}/${pattern}${String(i).padStart(7, '0')}${i}.${ext}`)
           }
         }
       }
 
-      // Cargar la lista real si existe un manifest
-      const manifestPath = `/${folder}/manifest.json`
-      try {
-        const response = await fetch(manifestPath)
-        if (response.ok) {
-          const manifest = await response.json()
-          setAvailableImages(manifest.images.map((img: string) => `/${folder}/${img}`))
-          setLoading(false)
-          return
-        }
-      } catch (e) {
-        // No hay manifest, usar la lista generada
-      }
-
+      console.log('📋 Total de rutas probables generadas:', possibleImages.length)
       // Por defecto, mostrar algunas rutas probables
-      setAvailableImages(possibleImages.slice(0, 20))
+      setAvailableImages(possibleImages.slice(0, 100))
     } catch (error) {
-      console.error('Error loading images:', error)
+      console.error('❌ Error loading images:', error)
       setAvailableImages([])
     }
     setLoading(false)
@@ -3468,6 +3482,11 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                           alt={`${selectedFolder} ${idx + 1}`}
                           className="absolute inset-0 w-full h-full object-cover"
                           loading="lazy"
+                          onLoad={(e) => {
+                            const target = e.target as HTMLImageElement
+                            console.log('✅ Imagen cargada correctamente:', imagePath)
+                            target.parentElement!.style.backgroundColor = 'transparent'
+                          }}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
                             target.style.display = 'none'
@@ -3478,7 +3497,7 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                               errorDiv.textContent = '❌'
                               parent.appendChild(errorDiv)
                             }
-                            console.error('❌ Error cargando:', imagePath)
+                            console.error('❌ Error cargando imagen:', imagePath)
                           }}
                         />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
