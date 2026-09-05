@@ -1553,6 +1553,7 @@ export default function AdminDashboard() {
         <MigrateBase64Modal
           tours={tourList}
           onClose={() => setShowMigrateBase64Modal(false)}
+          onSave={saveTours}
           onComplete={async () => {
             const refreshedTours = await fetchTours()
             if (refreshedTours.length > 0) {
@@ -4241,10 +4242,11 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
 interface MigrateBase64ModalProps {
   tours: Tour[]
   onClose: () => void
+  onSave: (tours: Tour[]) => Promise<void>
   onComplete: () => void
 }
 
-function MigrateBase64Modal({ tours, onClose, onComplete }: MigrateBase64ModalProps) {
+function MigrateBase64Modal({ tours, onClose, onSave, onComplete }: MigrateBase64ModalProps) {
   const [migrating, setMigrating] = useState(false)
   const [progress, setProgress] = useState('')
   
@@ -4302,7 +4304,7 @@ function MigrateBase64Modal({ tours, onClose, onComplete }: MigrateBase64ModalPr
       })
       
       setProgress('Guardando cambios en MongoDB...')
-      await saveTours(updatedTours)
+      await onSave(updatedTours)
       
       setProgress('✅ Migración completada')
       setTimeout(() => {
