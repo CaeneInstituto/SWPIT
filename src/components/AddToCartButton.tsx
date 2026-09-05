@@ -2,6 +2,43 @@ import { useState } from 'react'
 import { useCart, detectPersonsPerPackage, detectHasAccommodation } from '../context/CartContext'
 import type { Tour, WeekDay } from '../data/tours'
 
+// ── Función para determinar estilos por categoría de paquete ─────────────────
+
+const getPackageStyle = (label: string) => {
+  const labelUpper = label.toUpperCase()
+  
+  // VIP o FULL → Azul
+  if (labelUpper.includes('VIP') || labelUpper.includes('FULL')) {
+    return {
+      bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
+      border: 'border-blue-400',
+      labelText: 'text-blue-700 font-semibold',
+      priceText: 'text-blue-600',
+      noteText: 'text-blue-600/80'
+    }
+  }
+  
+  // GOLD → Dorado
+  if (labelUpper.includes('GOLD')) {
+    return {
+      bg: 'bg-gradient-to-br from-amber-50 to-yellow-100',
+      border: 'border-amber-400',
+      labelText: 'text-amber-800 font-semibold',
+      priceText: 'text-amber-600',
+      noteText: 'text-amber-700/80'
+    }
+  }
+  
+  // BASIC o default → Blanco
+  return {
+    bg: 'bg-gray-50',
+    border: 'border-gray-300',
+    labelText: 'text-gray-900 font-medium',
+    priceText: 'text-brand-teal',
+    noteText: 'text-gray-500'
+  }
+}
+
 // ── Helpers de fechas disponibles ────────────────────────────────────────────
 
 const WEEKDAY_NAMES: WeekDay[] = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
@@ -586,17 +623,23 @@ function DynamicCartModal({
               <div className="mb-6">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Paquetes disponibles:</h4>
                 <div className="grid grid-cols-1 gap-2">
-                  {tour.priceOptions.map((opt) => (
-                    <div key={opt.label} className="bg-gray-50 rounded-lg border p-3 text-sm">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-gray-900">{opt.label}</p>
-                          {opt.note && <p className="text-xs text-gray-500 mt-1">{opt.note}</p>}
+                  {tour.priceOptions.map((opt) => {
+                    const style = getPackageStyle(opt.label)
+                    return (
+                      <div 
+                        key={opt.label} 
+                        className={`${style.bg} rounded-lg border-2 ${style.border} p-3 text-sm shadow-sm transition-transform hover:scale-[1.02]`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className={`${style.labelText}`}>{opt.label}</p>
+                            {opt.note && <p className={`text-xs mt-1 ${style.noteText}`}>{opt.note}</p>}
+                          </div>
+                          <span className={`font-bold ${style.priceText}`}>{opt.price}</span>
                         </div>
-                        <span className="font-bold text-brand-teal">{opt.price}</span>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <p className="text-xs text-gray-400 mt-2 text-center">
                   ↑ En el siguiente paso podrás asignar estos paquetes a cada persona
