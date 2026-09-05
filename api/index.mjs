@@ -326,8 +326,13 @@ export default async function handler(req, res) {
     // ── GET /api/testimonials ─────────────────────────────────────────────────
     if (req.method === 'GET' && url === '/api/testimonials') {
       try {
+        // Caché de 10 minutos para testimonios (cambian poco)
+        res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200')
+        
         const db = await getDb()
         const testimonials = await db.collection('testimonials').find({}).sort({ createdAt: -1 }).toArray()
+        
+        console.log(`📦 GET /api/testimonials - Devolviendo ${testimonials.length} testimonios`)
         return json(res, 200, { ok: true, testimonials })
       } catch (error) {
         console.error('❌ Error en /api/testimonials:', error)
@@ -378,11 +383,60 @@ export default async function handler(req, res) {
     }
 
     // ── GET /api/tours ────────────────────────────────────────────────────────
+    // Listado optimizado: solo campos necesarios para tarjetas de tours
     if (req.method === 'GET' && url === '/api/tours') {
       try {
+        // Agregar caché de 5 minutos para reducir tráfico
+        res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+        
         const db = await getDb()
-        const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
-        return json(res, 200, { ok: true, tours })
+        
+        // Proyección: solo campos necesarios para el listado
+        const tours = await db.collection('tours').find({}).project({
+          // Campos esenciales para tarjetas
+          id: 1,
+          name: 1,
+          location: 1,
+          region: 1,
+          price: 1,
+          priceValue: 1,
+          days: 1,
+          tag: 1,
+          image: 1,  // Solo portada
+          rating: 1,
+          reviewCount: 1,
+          groupSize: 1,
+          disabled: 1,
+          availableDates: 1,
+          priceOptions: 1,
+          seasons: 1,
+          
+          // EXCLUIR campos pesados
+          images: 0,        // Galería completa NO
+          itinerary: 0,     // Itinerario completo NO
+          brochure: 0,      // PDF NO (se obtiene en detalle)
+          includes: 0,      // Listas largas NO
+          notIncludes: 0,
+          notes: 0,
+          recommendations: 0,
+          tourTerms: 0      // Términos largos NO
+        }).sort({ createdAt: -1 }).toArray()
+        
+        // Optimizar image: si es Base64, convertir a placeholder
+        const optimizedTours = tours.map(tour => ({
+          ...tour,
+          // Si la imagen es Base64, usar placeholder (evitar transferir MB de datos)
+          image: tour.image?.startsWith('data:image/') 
+            ? '/placeholder-tour.jpg' 
+            : tour.image,
+          // Comprimir precio si es string muy largo
+          price: typeof tour.price === 'string' && tour.price.length > 20
+            ? tour.price.substring(0, 20)
+            : tour.price
+        }))
+        
+        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (solo campos de listado)`)
+        return json(res, 200, { ok: true, tours: optimizedTours })
       } catch (error) {
         console.error('❌ Error en /api/tours:', error)
         return json(res, 500, { 
@@ -394,19 +448,51 @@ export default async function handler(req, res) {
     }
 
     // ── GET /api/tours/:id ────────────────────────────────────────────────────
+    // Detalle completo de un tour específico (incluye todo)
     if (req.method === 'GET' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
-      const id = url.split('/').pop()
-      const db = await getDb()
-      // Buscar por ID o por slug
-      let tour = null
       try {
-        tour = await db.collection('tours').findOne({ _id: new ObjectId(id) })
-      } catch {
-        // Si no es ObjectId válido, buscar por slug
-        tour = await db.collection('tours').findOne({ id })
+        // Caché de 5 minutos para detalles de tour
+        res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+        
+        const id = url.split('/').pop()
+        const db = await getDb()
+        
+        // Buscar por ID o por slug
+        let tour = null
+        try {
+          tour = await db.collection('tours').findOne({ _id: new ObjectId(id) })
+        } catch {
+          // Si no es ObjectId válido, buscar por slug
+          tour = await db.collection('tours').findOne({ id })
+        }
+        
+        if (!tour) return json(res, 404, { error: 'Tour no encontrado' })
+        
+        // Optimizar imágenes Base64 incluso en detalle
+        if (tour.image?.startsWith('data:image/')) {
+          tour.image = '/placeholder-tour.jpg'
+          tour._hasBase64Image = true  // Flag para el admin
+        }
+        
+        // Filtrar imágenes Base64 de la galería
+        if (tour.images && Array.isArray(tour.images)) {
+          const originalCount = tour.images.length
+          tour.images = tour.images.filter(img => !img.startsWith('data:image/'))
+          if (tour.images.length < originalCount) {
+            tour._removedBase64Images = originalCount - tour.images.length
+          }
+        }
+        
+        console.log(`📦 GET /api/tours/${id} - Devolviendo tour completo`)
+        return json(res, 200, { ok: true, tour })
+      } catch (error) {
+        console.error('❌ Error en /api/tours/:id:', error)
+        return json(res, 500, { 
+          ok: false, 
+          error: 'Error al cargar tour',
+          details: error.message 
+        })
       }
-      if (!tour) return json(res, 404, { error: 'Tour no encontrado' })
-      return json(res, 200, { ok: true, tour })
     }
 
     // ── POST /api/tours ───────────────────────────────────────────────────────

@@ -292,6 +292,7 @@ export default function AdminDashboard() {
   const [activeSeason, setActiveSeason] = useState<string | null>(null)
   const [showSeasonConfig, setShowSeasonConfig] = useState(false)
   const [configuringSeason, setConfiguringSeason] = useState<string | null>(null)
+  const [showMigrateBase64Modal, setShowMigrateBase64Modal] = useState(false)
   
   // Testimonials state
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
@@ -976,13 +977,22 @@ export default function AdminDashboard() {
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
             </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Agregar paquete
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowMigrateBase64Modal(true)}
+                className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
+                title="Convertir imágenes Base64 a rutas de carpetas"
+              >
+                🔄 Migrar Base64
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Agregar paquete
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1534,6 +1544,21 @@ export default function AdminDashboard() {
             loadTestimonials()
             setShowTestimonialForm(false)
             setEditingTestimonial(null)
+          }}
+        />
+      )}
+
+      {/* Migrate Base64 Modal */}
+      {showMigrateBase64Modal && (
+        <MigrateBase64Modal
+          tours={tourList}
+          onClose={() => setShowMigrateBase64Modal(false)}
+          onComplete={async () => {
+            const refreshedTours = await fetchTours()
+            if (refreshedTours.length > 0) {
+              setTourList(refreshedTours)
+            }
+            setShowMigrateBase64Modal(false)
           }}
         />
       )}
@@ -4205,6 +4230,164 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+
+// ─── Migrate Base64 Modal ─────────────────────────────────────────────────────
+
+interface MigrateBase64ModalProps {
+  tours: Tour[]
+  onClose: () => void
+  onComplete: () => void
+}
+
+function MigrateBase64Modal({ tours, onClose, onComplete }: MigrateBase64ModalProps) {
+  const [migrating, setMigrating] = useState(false)
+  const [progress, setProgress] = useState('')
+  
+  // Detectar tours con Base64
+  const toursWithBase64 = tours.filter(t => 
+    t.image?.startsWith('data:image/') || 
+    t.images?.some(img => img.startsWith('data:image/'))
+  )
+
+  const attemptMigration = async () => {
+    if (toursWithBase64.length === 0) return
+    
+    setMigrating(true)
+    setProgress('Iniciando migración...')
+    
+    try {
+      const updatedTours = tours.map(tour => {
+        // Si el tour no tiene Base64, dejarlo sin cambios
+        if (!tour.image?.startsWith('data:image/') && 
+            !tour.images?.some(img => img.startsWith('data:image/'))) {
+          return tour
+        }
+        
+        setProgress(`Procesando: ${tour.name}...`)
+        
+        // Intentar relacionar con carpeta existente por nombre
+        // Ej: "Cañón de Autisha" -> buscar carpeta "Autisha"
+        const possibleFolders = IMAGE_FOLDERS.filter(folder => 
+          tour.name.toLowerCase().includes(folder.toLowerCase()) ||
+          folder.toLowerCase().includes(tour.name.toLowerCase().replace(/\s/g, ''))
+        )
+        
+        let newImage = tour.image
+        let newImages = tour.images
+        
+        if (possibleFolders.length > 0) {
+          const folder = possibleFolders[0]
+          // Usar la primera imagen de esa carpeta como portada
+          newImage = `/${folder}/image1.jpg` // Placeholder, el admin deberá seleccionar la correcta
+          newImages = [] // Limpiar galería, el admin deberá seleccionar
+          
+          setProgress(`✓ ${tour.name} → sugerencia: carpeta "${folder}"`)
+        } else {
+          // No se pudo relacionar automáticamente
+          newImage = '/placeholder.jpg'
+          newImages = []
+          setProgress(`⚠ ${tour.name} → no se encontró carpeta relacionada`)
+        }
+        
+        return {
+          ...tour,
+          image: newImage,
+          images: newImages
+        }
+      })
+      
+      setProgress('Guardando cambios en MongoDB...')
+      await saveTours(updatedTours)
+      
+      setProgress('✅ Migración completada')
+      setTimeout(() => {
+        onComplete()
+      }, 1500)
+      
+    } catch (error) {
+      console.error('Error migrating:', error)
+      setProgress(`❌ Error: ${error}`)
+      setMigrating(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-2xl font-bold text-gray-900">🔄 Migrar imágenes Base64</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Explicación */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800 font-semibold mb-2">
+              ℹ️ ¿Qué hace esta herramienta?
+            </p>
+            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+              <li>Detecta tours con imágenes guardadas como Base64 (muy pesadas)</li>
+              <li>Intenta relacionarlas con carpetas en /public por nombre</li>
+              <li><strong>IMPORTANTE:</strong> Después deberás editar cada tour y seleccionar las imágenes correctas desde el selector</li>
+            </ul>
+          </div>
+
+          {/* Tours detectados */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="font-semibold text-gray-900 mb-2">
+              📋 Tours detectados con Base64: {toursWithBase64.length}
+            </p>
+            {toursWithBase64.length === 0 ? (
+              <p className="text-sm text-green-600">✅ No hay tours con imágenes Base64. Todo está en orden.</p>
+            ) : (
+              <ul className="text-sm text-gray-700 space-y-1 max-h-40 overflow-y-auto">
+                {toursWithBase64.map(t => (
+                  <li key={t.id} className="flex items-center gap-2">
+                    <span className="text-yellow-600">⚠️</span>
+                    <span>{t.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Progress */}
+          {progress && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-sm text-purple-800">{progress}</p>
+            </div>
+          )}
+
+          {/* Botones */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onClose}
+              disabled={migrating}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+            >
+              {migrating ? 'Migrando...' : 'Cancelar'}
+            </button>
+            <button
+              onClick={attemptMigration}
+              disabled={migrating || toursWithBase64.length === 0}
+              className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+            >
+              {migrating ? '🔄 Migrando...' : `Migrar ${toursWithBase64.length} tour(s)`}
+            </button>
+          </div>
+
+          {/* Warning */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs text-amber-800">
+              <strong>⚠️ Advertencia:</strong> Esta herramienta hace una migración inicial. Después deberás editar cada tour manualmente para seleccionar las imágenes correctas desde el selector de carpetas.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
