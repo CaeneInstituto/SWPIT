@@ -30,8 +30,8 @@ export default function Destinations() {
   const [search, setSearch] = useState('')
 
   // Cargar tours desde MongoDB API
-  const [tourList, setTourList] = useState<typeof tours>([])
-  const [loading, setLoading] = useState(true)
+  const [tourList, setTourList] = useState<typeof tours>(tours) // ✅ Iniciar con datos locales
+  const [loading, setLoading] = useState(false) // ✅ No bloquear UI inicial
 
   // Obtener regiones dinámicamente de los tours
   const REGIONS = useMemo(() => {
@@ -51,7 +51,20 @@ export default function Destinations() {
   useEffect(() => {
     async function loadTours() {
       try {
-        const res = await fetch(`${API_URL}/api/tours`)
+        console.log('🚀 Iniciando carga de tours desde API...')
+        const startTime = Date.now()
+        
+        // Timeout de 15 segundos (diagnóstico temporal; idealmente la API debe responder mucho antes)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        
+        const res = await fetch(`${API_URL}/api/tours`, {
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        const loadTime = Date.now() - startTime
+        console.log(`⏱️ API respondió en ${loadTime}ms`)
         
         if (!res.ok) {
           const text = await res.text()
@@ -62,12 +75,19 @@ export default function Destinations() {
         const data = await res.json()
         
         if (data.ok && data.tours && data.tours.length > 0) {
+          console.log(`✅ ${data.tours.length} tours cargados desde API`)
           setTourList(data.tours)
         } else {
+          console.warn('⚠️ API no devolvió tours, usando datos locales')
           setTourList(tours)
         }
-      } catch (error) {
-        console.error('Error loading tours from API:', error)
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.error('⏱️ Timeout: API tardó >15s, usando datos locales')
+        } else {
+          console.error('❌ Error loading tours from API:', error)
+        }
+        // Fallback a datos locales inmediatamente
         setTourList(tours)
       } finally {
         setLoading(false)
@@ -75,11 +95,9 @@ export default function Destinations() {
     }
     
     loadTours()
-
-    // Refrescar cuando el usuario vuelve a la pestaña (por si agregó nuevos tours)
-    const onFocus = () => loadTours()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    
+    // ❌ REMOVIDO: No recargar en focus (causaba múltiples llamadas innecesarias)
+    // Ahora solo carga una vez al montar el componente
   }, [])
 
   const filtered = tourList.filter((t) => {
