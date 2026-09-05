@@ -422,20 +422,19 @@ export default async function handler(req, res) {
           tourTerms: 0      // Términos largos NO
         }).sort({ createdAt: -1 }).toArray()
         
-        // Optimizar image: si es Base64, convertir a placeholder
+        // Optimizar image: si es Base64, MOSTRAR IGUAL (sin filtrar)
+        // ⚠️ MODO RECUPERACIÓN: muestra Base64 para que veas los tours
         const optimizedTours = tours.map(tour => ({
           ...tour,
-          // Si la imagen es Base64, usar placeholder (evitar transferir MB de datos)
-          image: tour.image?.startsWith('data:image/') 
-            ? '/placeholder-tour.jpg' 
+          // Truncar Base64 extremadamente largos (más de 50KB)
+          image: tour.image?.startsWith('data:image/') && tour.image.length > 50000
+            ? tour.image.substring(0, 50000) + '...[truncated]'
             : tour.image,
-          // Comprimir precio si es string muy largo
-          price: typeof tour.price === 'string' && tour.price.length > 20
-            ? tour.price.substring(0, 20)
-            : tour.price
+          // Flag para que el admin sepa que tiene Base64
+          _hasBase64: tour.image?.startsWith('data:image/') || false
         }))
         
-        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (solo campos de listado)`)
+        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (MODO RECUPERACIÓN - con Base64 truncado)`)
         return json(res, 200, { ok: true, tours: optimizedTours })
       } catch (error) {
         console.error('❌ Error en /api/tours:', error)
