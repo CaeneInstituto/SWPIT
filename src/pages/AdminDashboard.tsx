@@ -3445,34 +3445,32 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                     Haz clic en una imagen para establecerla como portada o agregarla al carrusel
                   </p>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1">
                     {availableImages.map((imagePath, idx) => (
-                      <div key={idx} className="relative group">
-                        <div className="relative w-full h-24 bg-gray-100 rounded-lg overflow-hidden">
-                          <img
-                            src={imagePath}
-                            alt={`${selectedFolder} ${idx + 1}`}
-                            className="w-full h-full object-cover border-2 border-gray-200 group-hover:border-green-500 transition-all cursor-pointer"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              const container = target.parentElement
-                              if (container) {
-                                container.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-red-50 text-red-500 text-xs">❌ Error</div>'
-                              }
-                              console.error('❌ Error cargando imagen:', imagePath)
-                            }}
-                            onLoad={(e) => {
-                              const container = (e.target as HTMLImageElement).parentElement
-                              if (container) container.style.backgroundColor = 'transparent'
-                            }}
-                          />
-                        </div>
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-1 p-1">
+                      <div key={idx} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group">
+                        <img
+                          src={imagePath}
+                          alt={`${selectedFolder} ${idx + 1}`}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent && !parent.querySelector('.error-placeholder')) {
+                              const errorDiv = document.createElement('div')
+                              errorDiv.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-red-50 text-red-500 text-xs font-semibold'
+                              errorDiv.textContent = '❌'
+                              parent.appendChild(errorDiv)
+                            }
+                            console.error('❌ Error cargando:', imagePath)
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                           <button
                             type="button"
                             onClick={() => setAsCoverImage(imagePath)}
-                            className="w-full px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition-colors"
+                            className="w-full px-3 py-1.5 bg-purple-500 text-white text-xs font-semibold rounded hover:bg-purple-600 transition-colors shadow-lg"
                             title="Establecer como portada"
                           >
                             📸 Portada
@@ -3480,7 +3478,7 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                           <button
                             type="button"
                             onClick={() => addToGallery(imagePath)}
-                            className="w-full px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                            className="w-full px-3 py-1.5 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600 transition-colors shadow-lg"
                             title="Agregar al carrusel"
                           >
                             ➕ Carrusel
