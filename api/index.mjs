@@ -406,7 +406,7 @@ export default async function handler(req, res) {
     }
 
     // ── GET /api/tours ────────────────────────────────────────────────────────
-    // Listado optimizado: solo campos necesarios para tarjetas de tours
+    // Listado ULTRA optimizado: proyección MongoDB para NO traer campos pesados
     if (req.method === 'GET' && url === '/api/tours') {
       try {
         // Agregar caché de 5 minutos para reducir tráfico
@@ -422,9 +422,40 @@ export default async function handler(req, res) {
             console.log(`📡 Intento ${attempt}/${retries} de conectar a MongoDB...`)
             const db = await getDb()
             
-            // Obtener todos los tours sin proyección
-            tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
-            console.log(`✅ ${tours.length} tours obtenidos de MongoDB`)
+            // PROYECCIÓN: Solo traer campos livianos, EXCLUIR campos pesados
+            const projection = {
+              _id: 1,
+              id: 1,
+              name: 1,
+              location: 1,
+              region: 1,
+              price: 1,
+              priceValue: 1,
+              days: 1,
+              tag: 1,
+              rating: 1,
+              reviewCount: 1,
+              groupSize: 1,
+              disabled: 1,
+              availableDates: 1,
+              priceOptions: 1,
+              seasons: 1,
+              image: 1,  // Solo la imagen de portada
+              // EXCLUIR (no poner en proyección):
+              // - images (galería completa)
+              // - itinerary (itinerario detallado)
+              // - brochure (PDF Base64)
+              // - tourTerms (términos largos)
+              // - description (descripciones largas)
+              // - included/notIncluded (listas largas)
+            }
+            
+            tours = await db.collection('tours')
+              .find({}, { projection })
+              .sort({ createdAt: -1 })
+              .toArray()
+              
+            console.log(`✅ ${tours.length} tours obtenidos (solo campos básicos)`)
             break // Éxito, salir del loop
             
           } catch (error) {
@@ -446,36 +477,24 @@ export default async function handler(req, res) {
           throw lastError
         }
         
-        // Filtrar campos manualmente en JavaScript
-        const optimizedTours = tours.map(tour => ({
-          // Solo incluir campos necesarios para tarjetas
-          id: tour.id,
-          name: tour.name,
-          location: tour.location,
-          region: tour.region,
-          price: tour.price,
-          priceValue: tour.priceValue,
-          days: tour.days,
-          tag: tour.tag,
-          rating: tour.rating,
-          reviewCount: tour.reviewCount,
-          groupSize: tour.groupSize,
-          disabled: tour.disabled,
-          availableDates: tour.availableDates,
-          priceOptions: tour.priceOptions,
-          seasons: tour.seasons,
+        // Filtrar Base64 de la imagen de portada
+        const optimizedTours = tours.map(tour => {
+          const hasBase64 = tour.image?.startsWith('data:image/')
           
-          // OPTIMIZACIÓN AGRESIVA: truncar Base64 a 5KB (antes 50KB)
-          // Esto permite cargar todos los tours sin timeout
-          image: tour.image?.startsWith('data:image/') && tour.image.length > 5000
-            ? '/placeholder-tour.jpg'  // Reemplazar directamente por placeholder
-            : tour.image,
-          
-          // Flag para identificar tours con Base64 (para migración)
-          _hasBase64: tour.image?.startsWith('data:image/') || false,
-        }))
+          return {
+            ...tour,
+            // Reemplazar Base64 > 5KB por placeholder
+            image: hasBase64 && tour.image.length > 5000
+              ? '/placeholder-tour.jpg'
+              : tour.image,
+            // Flag para migración
+            _hasBase64: hasBase64,
+          }
+        })
         
-        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours`)
+        const totalSize = JSON.stringify(optimizedTours).length
+        console.log(`📦 GET /api/tours - ${optimizedTours.length} tours, ~${(totalSize / 1024).toFixed(1)} KB`)
+        
         return json(res, 200, { ok: true, tours: optimizedTours })
         
       } catch (error) {
