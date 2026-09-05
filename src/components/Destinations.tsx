@@ -68,19 +68,20 @@ export default function Destinations() {
         const data = await res.json()
         
         // DEBUG: ver qué devuelve el API
-        console.log('📦 Respuesta API:', { ok: data.ok, toursLength: data.tours?.length, data })
+        console.log('📦 Respuesta API:', { ok: data.ok, toursLength: data.tours?.length })
         
-        if (data.ok && data.tours && data.tours.length > 0) {
+        if (data.ok && data.tours) {
           console.log(`✅ ${data.tours.length} tours cargados desde API`)
           setTourList(data.tours)
         } else {
-          console.warn('⚠️ API no devolvió tours, usando datos locales')
-          setTourList(tours)
+          console.error('❌ API no devolvió tours válidos:', data)
+          // Si el API falla, usar lista vacía (NO locales)
+          setTourList([])
         }
       } catch (error: any) {
         console.error('❌ Error loading tours from API:', error)
-        // Fallback a datos locales inmediatamente
-        setTourList(tours)
+        // Si hay error, mostrar lista vacía (NO datos locales)
+        setTourList([])
       } finally {
         setLoading(false)
       }
