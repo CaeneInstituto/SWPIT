@@ -3256,6 +3256,21 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
 
   const allFolders = [...IMAGE_FOLDERS, ...customFolders].sort()
 
+  // Detectar carpeta automáticamente desde imagen existente
+  useEffect(() => {
+    if (formData.image && !selectedFolder) {
+      // Extraer nombre de carpeta desde la ruta de imagen
+      // Ejemplo: "/Autisha/DSC_0365332.jpg" -> "Autisha"
+      const match = formData.image.match(/^\/([^\/]+)\//)
+      if (match && match[1]) {
+        const detectedFolder = match[1]
+        console.log('🔍 Carpeta detectada desde imagen existente:', detectedFolder)
+        setSelectedFolder(detectedFolder)
+        loadImagesFromFolder(detectedFolder)
+      }
+    }
+  }, [formData.image])
+
   // Cargar imágenes de una carpeta
   const loadImagesFromFolder = async (folder: string) => {
     setLoading(true)
