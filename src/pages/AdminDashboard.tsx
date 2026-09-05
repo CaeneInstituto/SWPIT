@@ -3468,65 +3468,62 @@ function ImageFolderBrowser({ formData, setFormData }: ImageFolderBrowserProps) 
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
                   <p className="text-sm text-gray-500 mt-2">Cargando imágenes...</p>
                 </div>
+              ) : availableImages.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-sm text-gray-400">No se encontraron imágenes en esta carpeta</p>
+                  <p className="text-xs text-gray-400 mt-1">Sube imágenes a /public/{selectedFolder}</p>
+                </div>
               ) : (
                 <>
                   <p className="text-xs text-gray-500 mb-3">
-                    Haz clic en una imagen para establecerla como portada o agregarla al carrusel
+                    📋 {availableImages.length} imágenes encontradas. Haz clic en una imagen para establecerla como portada o agregarla al carrusel
                   </p>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 bg-gray-50 rounded-lg" style={{ gridAutoRows: '80px' }}>
-                    {availableImages.map((imagePath, idx) => (
-                      <div key={idx} className="relative w-full h-20 min-h-[80px] max-h-[80px] rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group bg-white">
-                        <img
-                          src={imagePath}
-                          alt={`${selectedFolder} ${idx + 1}`}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          loading="eager"
-                          onLoad={(e) => {
-                            const target = e.target as HTMLImageElement
-                            console.log('✅ Imagen cargada correctamente:', imagePath)
-                          }}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent && !parent.querySelector('.error-placeholder')) {
-                              const errorDiv = document.createElement('div')
-                              errorDiv.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-red-50 text-red-500 text-xs font-semibold'
-                              errorDiv.textContent = '❌'
-                              parent.appendChild(errorDiv)
-                            }
-                            console.error('❌ Error cargando imagen:', imagePath)
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
-                          <button
-                            type="button"
-                            onClick={() => setAsCoverImage(imagePath)}
-                            className="w-full px-2 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded hover:bg-purple-600 transition-colors shadow-lg"
-                            title="Establecer como portada"
-                          >
-                            📸 Portada
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => addToGallery(imagePath)}
-                            className="w-full px-2 py-1 bg-blue-500 text-white text-[10px] font-semibold rounded hover:bg-blue-600 transition-colors shadow-lg"
-                            title="Agregar al carrusel"
-                          >
-                            ➕ Carrusel
-                          </button>
+                  <div className="max-h-64 overflow-y-auto p-1 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {availableImages.map((imagePath, idx) => (
+                        <div 
+                          key={idx} 
+                          className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-400 transition-all group bg-white relative"
+                          style={{ height: '80px' }}
+                        >
+                          <img
+                            src={imagePath}
+                            alt={`${selectedFolder} ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            onLoad={(e) => {
+                              console.log('✅ Imagen cargada:', idx + 1, imagePath)
+                            }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.opacity = '0'
+                              const parent = target.parentElement
+                              if (parent && !parent.querySelector('.error-msg')) {
+                                parent.innerHTML = '<div class="error-msg flex items-center justify-center h-full text-xs text-red-500">❌ Error</div>'
+                              }
+                              console.error('❌ Error cargando:', imagePath)
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
+                            <button
+                              type="button"
+                              onClick={() => setAsCoverImage(imagePath)}
+                              className="w-full px-2 py-1 bg-purple-500 text-white text-[10px] font-semibold rounded hover:bg-purple-600 transition-colors"
+                            >
+                              📸 Portada
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => addToGallery(imagePath)}
+                              className="w-full px-2 py-1 bg-blue-500 text-white text-[10px] font-semibold rounded hover:bg-blue-600 transition-colors"
+                            >
+                              ➕ Carrusel
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {availableImages.length === 0 && (
-                    <div className="text-center py-6">
-                      <p className="text-sm text-gray-400">No se encontraron imágenes en esta carpeta</p>
-                      <p className="text-xs text-gray-400 mt-1">Sube imágenes a /public/{selectedFolder}</p>
+                      ))}
                     </div>
-                  )}
+                  </div>
                 </>
               )}
             </div>
