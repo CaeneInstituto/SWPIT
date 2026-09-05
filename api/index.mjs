@@ -391,50 +391,41 @@ export default async function handler(req, res) {
         
         const db = await getDb()
         
-        // Proyección: solo campos necesarios para el listado
-        const tours = await db.collection('tours').find({}).project({
-          // Campos esenciales para tarjetas
-          id: 1,
-          name: 1,
-          location: 1,
-          region: 1,
-          price: 1,
-          priceValue: 1,
-          days: 1,
-          tag: 1,
-          image: 1,  // Solo portada
-          rating: 1,
-          reviewCount: 1,
-          groupSize: 1,
-          disabled: 1,
-          availableDates: 1,
-          priceOptions: 1,
-          seasons: 1,
-          
-          // EXCLUIR campos pesados
-          images: 0,        // Galería completa NO
-          itinerary: 0,     // Itinerario completo NO
-          brochure: 0,      // PDF NO (se obtiene en detalle)
-          includes: 0,      // Listas largas NO
-          notIncludes: 0,
-          notes: 0,
-          recommendations: 0,
-          tourTerms: 0      // Términos largos NO
-        }).sort({ createdAt: -1 }).toArray()
+        // Obtener todos los tours sin proyección (MongoDB no permite mezclar inclusión/exclusión)
+        const tours = await db.collection('tours').find({}).sort({ createdAt: -1 }).toArray()
         
-        // Optimizar image: si es Base64, MOSTRAR IGUAL (sin filtrar)
-        // ⚠️ MODO RECUPERACIÓN: muestra Base64 para que veas los tours
+        // Filtrar campos manualmente en JavaScript
         const optimizedTours = tours.map(tour => ({
-          ...tour,
-          // Truncar Base64 extremadamente largos (más de 50KB)
+          // Solo incluir campos necesarios para tarjetas
+          id: tour.id,
+          name: tour.name,
+          location: tour.location,
+          region: tour.region,
+          price: tour.price,
+          priceValue: tour.priceValue,
+          days: tour.days,
+          tag: tour.tag,
+          rating: tour.rating,
+          reviewCount: tour.reviewCount,
+          groupSize: tour.groupSize,
+          disabled: tour.disabled,
+          availableDates: tour.availableDates,
+          priceOptions: tour.priceOptions,
+          seasons: tour.seasons,
+          
+          // Optimizar imagen: truncar Base64 si es muy grande
           image: tour.image?.startsWith('data:image/') && tour.image.length > 50000
             ? tour.image.substring(0, 50000) + '...[truncated]'
             : tour.image,
-          // Flag para que el admin sepa que tiene Base64
-          _hasBase64: tour.image?.startsWith('data:image/') || false
+          
+          // Flag para identificar tours con Base64
+          _hasBase64: tour.image?.startsWith('data:image/') || false,
+          
+          // NO incluir campos pesados:
+          // images, itinerary, brochure, includes, notIncludes, notes, recommendations, tourTerms
         }))
         
-        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (MODO RECUPERACIÓN - con Base64 truncado)`)
+        console.log(`📦 GET /api/tours - Devolviendo ${optimizedTours.length} tours (MODO RECUPERACIÓN - filtrado manual)`)
         return json(res, 200, { ok: true, tours: optimizedTours })
       } catch (error) {
         console.error('❌ Error en /api/tours:', error)
