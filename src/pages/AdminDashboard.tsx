@@ -192,18 +192,42 @@ async function fetchTours(): Promise<Tour[]> {
     
     const data = await res.json()
     if (data.ok && data.tours) {
-      return data.tours.map((t: any) => ({
-        ...t,
-        itinerary: (t.itinerary || []).map((day: any) => ({
-          ...day,
-          activities: normalizeActivities(day.activities || [])
-        }))
-      }))
+      // ✅ Solo devolver tours ligeros (sin itinerarios, galerías, etc.)
+      // El backend ya está optimizado para devolver solo campos básicos
+      return data.tours
     }
     return []
   } catch (error) {
     console.error('Error fetching tours:', error)
     return []
+  }
+}
+
+// ✅ NUEVA: Cargar tour completo por ID (para edición)
+async function fetchTourById(tourId: string): Promise<Tour | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/tours/${tourId}`)
+    
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`❌ API /api/tours/${tourId} returned ${res.status}:`, text)
+      return null
+    }
+    
+    const data = await res.json()
+    if (data.ok && data.tour) {
+      // Normalizar actividades con timeFormat
+      const tour = data.tour
+      tour.itinerary = (tour.itinerary || []).map((day: any) => ({
+        ...day,
+        activities: normalizeActivities(day.activities || [])
+      }))
+      return tour
+    }
+    return null
+  } catch (error) {
+    console.error('Error fetching tour by ID:', error)
+    return null
   }
 }
 
@@ -1009,7 +1033,15 @@ export default function AdminDashboard() {
                 key={tour.id}
                 tour={tour}
                 onToggle={() => toggleTourStatus(tour.id)}
-                onEdit={() => setEditingTour(tour)}
+                onEdit={async () => {
+                  // ✅ Cargar tour completo antes de editar
+                  const fullTour = await fetchTourById(tour.id)
+                  if (fullTour) {
+                    setEditingTour(fullTour)
+                  } else {
+                    alert('❌ Error al cargar el tour completo')
+                  }
+                }}
                 onDelete={() => deleteTour(tour.id)}
               />
             ))

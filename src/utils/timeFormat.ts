@@ -13,31 +13,34 @@
  * - "1:30" → "01:30" (sin am/pm asume formato 24h)
  */
 export function normalizeToTime24(time: string): string {
-  // Aceptar valores vacíos o placeholders sin generar warning
+  // Aceptar valores vacíos, null o placeholders sin generar warning
   if (!time || time.trim() === '' || time === '--:--') return '--:--'
   
-  const cleaned = time.trim().toLowerCase()
+  const cleaned = time.trim()
+  
+  // LABELS DESCRIPTIVOS: Mañana, Tarde, Noche, etc. - devolverlos tal cual
+  const descriptiveLabels = ['Mañana', 'Mediodía', 'Tarde', 'Noche', 'Madrugada', 'Temprano']
+  if (descriptiveLabels.includes(cleaned)) return cleaned
+  
+  const cleanedLower = cleaned.toLowerCase()
   
   // Si ya está en formato 24h puro (HH:MM o H:MM sin am/pm)
-  if (/^\d{1,2}:\d{2}$/.test(cleaned) && !cleaned.includes('am') && !cleaned.includes('pm')) {
-    const [hours, minutes] = cleaned.split(':')
+  if (/^\d{1,2}:\d{2}$/.test(cleanedLower) && !cleanedLower.includes('am') && !cleanedLower.includes('pm')) {
+    const [hours, minutes] = cleanedLower.split(':')
     return `${hours.padStart(2, '0')}:${minutes}`
   }
   
   // Si tiene am/pm, convertir de 12h a 24h
-  const match = cleaned.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
+  const match = cleanedLower.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i)
   if (!match) {
     // Si no hay match, intentar parsear como 24h
-    const simpleMatch = cleaned.match(/(\d{1,2}):(\d{2})/)
+    const simpleMatch = cleanedLower.match(/(\d{1,2}):(\d{2})/)
     if (simpleMatch) {
       const [, hours, minutes] = simpleMatch
       return `${hours.padStart(2, '0')}:${minutes}`
     }
-    // Solo advertir si no es un placeholder conocido
-    if (time !== '--:--') {
-      console.warn('Invalid time format:', time)
-    }
-    return '--:--'
+    // NO generar warning para valores válidos descriptivos
+    return cleaned
   }
   
   let [, hours, minutes, period] = match
@@ -67,12 +70,16 @@ export function normalizeToTime24(time: string): string {
  * - Formatos descriptivos como "Mañana", "Tarde" → se devuelven tal como están
  */
 export function formatToTime12(time24: string): string {
-  // Aceptar valores vacíos o placeholders sin generar warning
+  // Aceptar valores vacíos, null o placeholders sin generar warning
   if (!time24 || time24.trim() === '' || time24 === '--:--') return '--:--'
   
   const cleaned = time24.trim()
   
-  // Si es un formato descriptivo (Mañana, Tarde, Noche, etc.), devolverlo tal como está
+  // LABELS DESCRIPTIVOS: Mañana, Tarde, Noche, etc. - devolverlos tal cual
+  const descriptiveLabels = ['Mañana', 'Mediodía', 'Tarde', 'Noche', 'Madrugada', 'Temprano']
+  if (descriptiveLabels.includes(cleaned)) return cleaned
+  
+  // Si es un formato descriptivo genérico (sin dígitos), devolverlo tal como está
   if (!/\d/.test(cleaned)) {
     return cleaned
   }
@@ -104,8 +111,8 @@ export function formatToTime12(time24: string): string {
   // Formato 24h puro, convertir a 12h
   const match = lowerCleaned.match(/(\d{1,2}):(\d{2})/)
   if (!match) {
-    console.warn('Invalid 24h time format:', time24)
-    return '--:--'
+    // NO generar warning para valores válidos descriptivos
+    return cleaned
   }
   
   const [, hoursStr, minutes] = match
