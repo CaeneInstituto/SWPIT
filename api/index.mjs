@@ -704,6 +704,7 @@ export default async function handler(req, res) {
         const jwt = `${unsigned}.${signature}`
 
         // Intercambiar JWT por access token
+        console.log('🔑 Solicitando token Google...')
         const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -714,16 +715,30 @@ export default async function handler(req, res) {
         })
         const tokenData = await tokenRes.json()
         if (!tokenData.access_token) {
-          console.error('❌ Error obteniendo token Drive:', tokenData)
-          return json(res, 500, { error: 'No se pudo autenticar con Google Drive' })
+          console.error('❌ Error token Google:', JSON.stringify(tokenData))
+          return json(res, 500, { 
+            error: 'No se pudo autenticar con Google Drive',
+            detail: tokenData.error_description || tokenData.error || 'sin detalle'
+          })
         }
+        console.log('✅ Token obtenido OK')
 
         // Listar archivos de imagen en la carpeta
-        const listUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'+and+trashed=false&fields=files(id,name,mimeType)&pageSize=50`
+        const q = encodeURIComponent(`'${folderId}' in parents and mimeType contains 'image/' and trashed=false`)
+        const listUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=50`
+        console.log('📂 Listando carpeta Drive:', folderId)
         const listRes = await fetch(listUrl, {
           headers: { Authorization: `Bearer ${tokenData.access_token}` },
         })
         const listData = await listRes.json()
+        console.log('📂 Drive API response status:', listRes.status, JSON.stringify(listData).substring(0, 200))
+
+        if (listData.error) {
+          return json(res, 500, { 
+            error: 'Error al listar la carpeta de Drive',
+            detail: listData.error.message || listData.error.status
+          })
+        }
 
         if (!listData.files) {
           return json(res, 200, { ok: true, images: [] })
@@ -736,10 +751,11 @@ export default async function handler(req, res) {
           url: `https://lh3.googleusercontent.com/d/${f.id}`,
         }))
 
+        console.log(`✅ Drive: ${images.length} imagenes encontradas`)
         return json(res, 200, { ok: true, images })
       } catch (err) {
-        console.error('❌ Error Drive API:', err.message)
-        return json(res, 500, { error: 'Error al conectar con Google Drive' })
+        console.error('❌ Error Drive API:', err.message, err.stack?.substring(0, 300))
+        return json(res, 500, { error: 'Error al conectar con Google Drive', detail: err.message })
       }
     }
 

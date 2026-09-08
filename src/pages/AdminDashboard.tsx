@@ -2161,7 +2161,7 @@ function DriveImagePicker({ value, onChange }: DriveImagePickerProps) {
     try {
       const res = await fetch(`${API_URL_DRIVE}/api/drive/folder?id=${folderId}`)
       const data = await res.json()
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Error al listar carpeta')
+      if (!res.ok || !data.ok) throw new Error(data.detail || data.error || 'Error al listar carpeta')
       setImages(data.images)
       if (data.images.length === 0) setError('La carpeta está vacía o no tiene imágenes')
     } catch (e: any) {
