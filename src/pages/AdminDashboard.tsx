@@ -1550,16 +1550,13 @@ export default function AdminDashboard() {
           tour={editingTour}
           onClose={() => setEditingTour(null)}
           onSave={async (updatedTour) => {
-            const updatedTours = tourList.map(t =>
-              t.id === updatedTour.id ? updatedTour : t
-            )
-            await saveTours(updatedTours)
-            // Recargar la lista después de guardar
-            const refreshedTours = await fetchTours()
-            if (refreshedTours.length > 0) {
-              setTourList(refreshedTours)
+            // Guardar SOLO el tour editado, no toda la lista
+            const success = await saveTourToAPI(updatedTour)
+            if (success) {
+              // Actualizar localmente
+              setTourList(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t))
+              setEditingTour(null)
             }
-            setEditingTour(null)
           }}
         />
       )}
@@ -1987,21 +1984,25 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validación: al menos un ítem en itinerario
+    // Validación: advertir si no hay itinerario pero no bloquear
     if (!formData.itinerary || formData.itinerary.length === 0) {
-      alert('Agrega al menos un día de itinerario')
-      setActiveFormTab('itinerary')
-      return
+      const continuar = window.confirm('⚠️ El tour no tiene itinerario. ¿Guardar de todas formas?')
+      if (!continuar) {
+        setActiveFormTab('itinerary')
+        return
+      }
+    } else {
+      // Solo avisar si hay días sin actividades, no bloquear
+      const dayWithoutActivities = formData.itinerary.find(day => day.activities.length === 0)
+      if (dayWithoutActivities) {
+        const continuar = window.confirm(`⚠️ El día ${dayWithoutActivities.day} no tiene actividades. ¿Guardar de todas formas?`)
+        if (!continuar) {
+          setActiveFormTab('itinerary')
+          return
+        }
+      }
     }
 
-    // Validación: cada día debe tener al menos una actividad
-    const dayWithoutActivities = formData.itinerary.find(day => day.activities.length === 0)
-    if (dayWithoutActivities) {
-      alert(`El día ${dayWithoutActivities.day} no tiene actividades. Agrega al menos una.`)
-      setActiveFormTab('itinerary')
-      return
-    }
-    
     onSave(formData as Tour)
   }
 
