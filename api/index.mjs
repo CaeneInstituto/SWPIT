@@ -676,11 +676,13 @@ export default async function handler(req, res) {
       if (!folderId) return json(res, 400, { error: 'Falta el parámetro id' })
 
       const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-      // Vercel puede entregar la key con \n literales o con saltos reales — normalizar ambos
-      const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '')
-        .replace(/\\n/g, '\n')   // \n literal → salto real
-        .replace(/\n /g, '\n')   // eliminar espacios tras saltos
-        .trim()
+      // Soporta key en base64 (GOOGLE_PRIVATE_KEY_B64) o texto plano (GOOGLE_PRIVATE_KEY)
+      let privateKey = ''
+      if (process.env.GOOGLE_PRIVATE_KEY_B64) {
+        privateKey = Buffer.from(process.env.GOOGLE_PRIVATE_KEY_B64, 'base64').toString('utf8')
+      } else {
+        privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n').replace(/\n /g, '\n').trim()
+      }
 
       if (!serviceEmail || !privateKey) {
         return json(res, 500, { error: 'Google Drive API no configurada' })
