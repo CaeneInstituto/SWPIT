@@ -233,6 +233,19 @@ async function fetchTourById(tourId: string): Promise<Tour | null> {
 
 async function saveTourToAPI(tour: Tour): Promise<boolean> {
   try {
+    // ✅ VALIDACIÓN: Rechazar imágenes Base64
+    if (tour.image?.startsWith('data:image/')) {
+      alert('❌ ERROR: La imagen principal está en Base64.\n\nUsa rutas de archivo como: /Autisha/imagen.jpg\n\nNo se permiten imágenes Base64 en la base de datos.')
+      console.error('❌ Rechazado: tour.image es Base64')
+      return false
+    }
+    
+    if (tour.images?.some(img => img.startsWith('data:image/'))) {
+      alert('❌ ERROR: Algunas imágenes de la galería están en Base64.\n\nUsa rutas de archivo como: /Autisha/imagen.jpg\n\nNo se permiten imágenes Base64 en la base de datos.')
+      console.error('❌ Rechazado: tour.images contiene Base64')
+      return false
+    }
+    
     const method = tour._id ? 'PUT' : 'POST'
     const url = tour._id ? `${API_URL}/api/tours/${tour.id}` : `${API_URL}/api/tours`
     

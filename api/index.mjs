@@ -529,6 +529,20 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && url === '/api/tours') {
       const body = await readBody(req)
       
+      // ✅ VALIDACIÓN: Rechazar imágenes Base64
+      if (body.image?.startsWith('data:image/')) {
+        return json(res, 400, { 
+          ok: false,
+          error: 'No se permiten imágenes Base64. Usa rutas de archivo como /Autisha/imagen.jpg' 
+        })
+      }
+      if (body.images?.some(img => img.startsWith('data:image/'))) {
+        return json(res, 400, { 
+          ok: false,
+          error: 'No se permiten imágenes Base64 en galería. Usa rutas de archivo como /Autisha/imagen.jpg' 
+        })
+      }
+      
       // Validar campos mínimos requeridos
       if (!body.id || !body.name) {
         return json(res, 400, { error: 'Faltan campos requeridos: id, name' })
@@ -558,6 +572,20 @@ export default async function handler(req, res) {
     if (req.method === 'PUT' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
       const tourId = url.split('/').pop()
       const body = await readBody(req)
+      
+      // ✅ VALIDACIÓN: Rechazar imágenes Base64
+      if (body.image?.startsWith('data:image/')) {
+        return json(res, 400, { 
+          ok: false,
+          error: 'No se permiten imágenes Base64. Usa rutas de archivo como /Autisha/imagen.jpg' 
+        })
+      }
+      if (body.images?.some(img => img.startsWith('data:image/'))) {
+        return json(res, 400, { 
+          ok: false,
+          error: 'No se permiten imágenes Base64 en galería. Usa rutas de archivo como /Autisha/imagen.jpg' 
+        })
+      }
       
       const db = await getDb()
       // Buscar por _id de MongoDB o por campo id (slug)
