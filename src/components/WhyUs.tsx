@@ -1,10 +1,10 @@
 const features = [
   { icon: '🏆', title: 'Experiencia comprobada',   desc: 'Más de 6 años llevando viajeros a los rincones más increíbles del Perú con total seguridad.' },
-  { icon: '🗺️', title: 'Guías certificados',        desc: 'Nuestros guías son locales certificados que conocen cada historia, ruta y secreto del destino.' },
-  { icon: '💼', title: 'Todo incluido',             desc: 'Transporte, alojamiento, alimentación y actividades. Tú solo preocúpate de disfrutar.' },
+  { icon: '🗺️', title: 'Guías certificados',        desc: 'Nuestros guías son certificados y conocen cada historia, ruta y secreto del destino.' },
+  { icon: '💼', title: 'Variedad de paquetes a tu medida', desc: 'Transporte, alojamiento, alimentación y actividades. Tú solo preocúpate de disfrutar.' },
   { icon: '📞', title: 'Soporte 24/7',              desc: 'Estamos disponibles en todo momento durante tu viaje para cualquier consulta o emergencia.' },
-  { icon: '💰', title: 'Mejor precio garantizado',  desc: 'Encontramos el mismo paquete más barato y te devolvemos la diferencia. Sin preguntas.' },
-  { icon: '🌿', title: 'Turismo responsable',       desc: 'Comprometidos con el medio ambiente y las comunidades locales en cada uno de nuestros tours.' },
+  { icon: '💰', title: 'Mejor precio garantizado',  desc: 'Contamos con una variedad de precios y paquetes acordes al mercado.' },
+  { icon: '🌿', title: 'Turismo responsable',       desc: 'Comprometidos con el medio ambiente y las comunidades en cada uno de nuestros tours.' },
 ]
 
 export default function WhyUs() {

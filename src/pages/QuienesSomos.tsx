@@ -4,7 +4,7 @@ import Footer from '../components/Footer'
 import WhatsAppChat from '../components/WhatsAppChat'
 
 const features = [
-  { icon: '🏆', title: 'Experiencia comprobada',       desc: 'Registrados en Mincetur desde 2022, con cientos de viajeros satisfechos que nos respaldan.' },
+  { icon: '🏆', title: 'Experiencia comprobada',       desc: 'Registrados en Mincetur, con cientos de viajeros satisfechos que nos respaldan.' },
   { icon: '🗺️', title: 'Guías capacitados',             desc: 'Nuestros guías conocen cada ruta, historia y secreto de los destinos que visitamos.' },
   { icon: '📦', title: 'Paquetes completos',            desc: 'Full day, 2D1N y más. Transporte, guía y tours incluidos. Tú solo preocúpate de disfrutar.' },
   { icon: '📞', title: 'Asistencia antes y durante',   desc: 'Te acompañamos desde la reserva hasta el regreso. Siempre disponibles para cualquier consulta.' },
@@ -13,10 +13,10 @@ const features = [
 ]
 
 const stats = [
-  { value: '2022', label: 'Registro Mincetur' },
-  { value: '5K+',  label: 'Viajeros felices'  },
-  { value: '15+',  label: 'Destinos'          },
-  { value: '100%', label: 'Formal y registrada' },
+  { value: '6+',    label: 'Años de experiencia' },
+  { value: '20K+',  label: 'Viajeros felices'    },
+  { value: '20+',   label: 'Destinos'            },
+  { value: '100%',  label: 'Formal y registrada' },
 ]
 
 const services = [
@@ -64,7 +64,7 @@ export default function QuienesSomos() {
         <div className="absolute inset-0 bg-gradient-to-b from-brand-dark/75 via-brand-teal-d/60 to-brand-dark/85" />
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <span className="inline-block bg-brand-yellow text-white text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full mb-5 shadow">
-            Agencia registrada en Mincetur desde 2022 · RUC 20606474467
+            Agencia registrada en Mincetur · RUC 20606474467
           </span>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-5 drop-shadow-lg">
             Quiénes <span className="text-brand-yellow">Somos</span>
@@ -100,7 +100,7 @@ export default function QuienesSomos() {
                 <strong>Peru In Travel</strong> es una agencia de viajes ubicada en <strong>Jr. Los Nogales 345, Los Ficus, Santa Anita, Lima</strong>, especializada en paquetes turísticos y tours dentro del Perú. Ofrecemos destinos en la costa, sierra y selva: Paracas, Huacachina, Lunahuaná, Huancaya, Selva Central y muchos más.
               </p>
               <p>
-                Operamos bajo la razón social <strong>David Saúl Rivas Mogollón</strong> con nombre comercial <strong>Peru In Travel</strong> y estamos formalmente registrados en <strong>Mincetur desde 2022</strong>, lo que garantiza que cada servicio que ofrecemos cumple con los estándares oficiales de calidad y seguridad turística del Perú.
+                Operamos bajo la razón social <strong>David Saúl Rivas Mogollón</strong> con nombre comercial <strong>Peru In Travel</strong> y estamos formalmente registrados en <strong>Mincetur</strong>, lo que garantiza que cada servicio que ofrecemos cumple con los estándares oficiales de calidad y seguridad turística del Perú.
               </p>
               <p>
                 Nuestro enfoque está en las <strong>experiencias personalizadas</strong>: adaptamos cada tour a tu grupo, fechas y preferencias, con guías capacitados y asistencia completa antes, durante y después del viaje.
@@ -119,7 +119,7 @@ export default function QuienesSomos() {
                 🏢 David Saúl Rivas Mogollón
               </div>
               <div className="flex items-center gap-2 bg-brand-yellow/15 text-brand-yellow-d text-xs font-bold px-4 py-2 rounded-full">
-                ✅ Mincetur desde 2022
+                ✅ Mincetur
               </div>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function QuienesSomos() {
           <div className="text-center mb-14">
             <span className="text-brand-teal font-semibold text-sm uppercase tracking-widest">Nuestra identidad</span>
             <h2 className="text-4xl md:text-5xl font-extrabold mt-2 text-gray-900">
-              Misión, Visión y <span className="text-brand-teal">Objetivos</span>
+              Misión y <span className="text-brand-teal">Visión</span>
             </h2>
           </div>
 
@@ -199,130 +199,6 @@ export default function QuienesSomos() {
             </div>
           </div>
 
-          {/* Objetivos */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl p-8 md:p-12 border-2 border-gray-200">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-14 h-14 bg-brand-dark rounded-2xl flex items-center justify-center text-3xl shadow-lg">
-                📊
-              </div>
-              <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900">Objetivos</h3>
-            </div>
-
-            {/* Objetivos Generales */}
-            <div className="mb-10">
-              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 bg-brand-teal text-white rounded-lg flex items-center justify-center text-sm font-bold">G</span>
-                Objetivos Generales
-              </h4>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
-                  <span className="text-brand-teal font-bold text-lg shrink-0">1.</span>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    Consolidarse como una agencia de viajes confiable a nivel nacional, ofreciendo experiencias auténticas y personalizadas.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
-                  <span className="text-brand-teal font-bold text-lg shrink-0">2.</span>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    Incrementar la satisfacción del cliente mediante un servicio cercano, eficiente y de calidad.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-gray-200 hover:border-brand-teal/40 transition-colors">
-                  <span className="text-brand-teal font-bold text-lg shrink-0">3.</span>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    Promover el turismo interno responsable, resaltando la cultura y naturaleza del Perú.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Objetivos Específicos */}
-            <div>
-              <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 bg-brand-yellow text-white rounded-lg flex items-center justify-center text-sm font-bold">E</span>
-                Objetivos Específicos
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Objetivo 1 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      1
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Crecimiento comercial</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Aumentar las ventas en un 20% anual mediante la ampliación de rutas y paquetes turísticos.
-                  </p>
-                </div>
-
-                {/* Objetivo 2 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      2
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Experiencia del cliente</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Lograr un nivel de satisfacción superior al 90%, a través de atención personalizada y seguimiento post-viaje.
-                  </p>
-                </div>
-
-                {/* Objetivo 3 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      3
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Expansión de destinos</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Incorporar al menos 2 nuevos destinos o rutas cada año.
-                  </p>
-                </div>
-
-                {/* Objetivo 4 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      4
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Presencia digital</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Fortalecer redes sociales y canales digitales, aumentando la comunidad en un 30% anual.
-                  </p>
-                </div>
-
-                {/* Objetivo 5 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      5
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Accesibilidad</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Diseñar paquetes turísticos con precios competitivos, manteniendo una excelente relación calidad-precio.
-                  </p>
-                </div>
-
-                {/* Objetivo 6 */}
-                <div className="bg-white rounded-xl p-5 border border-gray-200 hover:border-brand-yellow/50 transition-all hover:shadow-md">
-                  <div className="flex items-start gap-3 mb-2">
-                    <span className="w-7 h-7 bg-brand-yellow/20 text-brand-yellow-d rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                      6
-                    </span>
-                    <h5 className="font-bold text-gray-900 text-sm">Alianzas estratégicas</h5>
-                  </div>
-                  <p className="text-gray-600 text-xs leading-relaxed ml-10">
-                    Establecer convenios con proveedores (hoteles, guías, transporte) para mejorar la experiencia del viajero.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
