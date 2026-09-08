@@ -676,10 +676,23 @@ export default async function handler(req, res) {
       if (!folderId) return json(res, 400, { error: 'Falta el parámetro id' })
 
       const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-      const privateKey   = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+      // Vercel puede entregar la key con \n literales o con saltos reales — normalizar ambos
+      const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '')
+        .replace(/\\n/g, '\n')   // \n literal → salto real
+        .replace(/\n /g, '\n')   // eliminar espacios tras saltos
+        .trim()
 
       if (!serviceEmail || !privateKey) {
         return json(res, 500, { error: 'Google Drive API no configurada' })
+      }
+
+      // Verificar que la key tenga el formato correcto
+      if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        console.error('❌ GOOGLE_PRIVATE_KEY mal formateada, no contiene header PEM')
+        return json(res, 500, { 
+          error: 'GOOGLE_PRIVATE_KEY mal formateada',
+          detail: 'Debe empezar con -----BEGIN PRIVATE KEY-----'
+        })
       }
 
       try {
