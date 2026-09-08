@@ -233,34 +233,28 @@ async function fetchTourById(tourId: string): Promise<Tour | null> {
 
 async function saveTourToAPI(tour: Tour): Promise<boolean> {
   try {
-    // ✅ VALIDACIÓN: Rechazar imágenes Base64
-    if (tour.image?.startsWith('data:image/')) {
-      alert('❌ ERROR: La imagen principal está en Base64.\n\nUsa rutas de archivo como: /Autisha/imagen.jpg\n\nNo se permiten imágenes Base64 en la base de datos.')
-      console.error('❌ Rechazado: tour.image es Base64')
-      return false
+    // ✅ Limpiar Base64 automáticamente en lugar de bloquear
+    const cleanTour = {
+      ...tour,
+      image: tour.image?.startsWith('data:image/') ? '/placeholder-tour.jpg' : tour.image,
+      images: (tour.images || []).filter(img => !img.startsWith('data:image/')),
     }
-    
-    if (tour.images?.some(img => img.startsWith('data:image/'))) {
-      alert('❌ ERROR: Algunas imágenes de la galería están en Base64.\n\nUsa rutas de archivo como: /Autisha/imagen.jpg\n\nNo se permiten imágenes Base64 en la base de datos.')
-      console.error('❌ Rechazado: tour.images contiene Base64')
-      return false
-    }
-    
-    const method = tour._id ? 'PUT' : 'POST'
-    const url = tour._id ? `${API_URL}/api/tours/${tour.id}` : `${API_URL}/api/tours`
+
+    const method = cleanTour._id ? 'PUT' : 'POST'
+    const url = cleanTour._id ? `${API_URL}/api/tours/${cleanTour.id}` : `${API_URL}/api/tours`
     
     console.log(`🔄 ${method} request to:`, url)
     console.log('🔄 Tour data:', {
       name: tour.name,
       id: tour.id,
       _id: tour._id,
-      hasItinerary: !!tour.itinerary?.length
+      hasItinerary: !!cleanTour.itinerary?.length
     })
     
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tour)
+      body: JSON.stringify(cleanTour)
     })
     
     if (!res.ok) {
@@ -1550,11 +1544,16 @@ export default function AdminDashboard() {
           tour={editingTour}
           onClose={() => setEditingTour(null)}
           onSave={async (updatedTour) => {
-            // Guardar SOLO el tour editado, no toda la lista
-            const success = await saveTourToAPI(updatedTour)
+            // Limpiar Base64 si existe antes de guardar
+            const cleanTour = {
+              ...updatedTour,
+              image: updatedTour.image?.startsWith('data:image/') ? '/placeholder-tour.jpg' : updatedTour.image,
+              images: (updatedTour.images || []).filter(img => !img.startsWith('data:image/')),
+            }
+            const success = await saveTourToAPI(cleanTour)
             if (success) {
-              // Actualizar localmente
-              setTourList(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t))
+              // Actualizar el tour en la lista local con los datos limpios
+              setTourList(prev => prev.map(t => t.id === cleanTour.id ? { ...t, ...cleanTour } : t))
               setEditingTour(null)
             }
           }}

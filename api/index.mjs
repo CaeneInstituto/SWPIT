@@ -366,8 +366,8 @@ export default async function handler(req, res) {
     // ── GET /api/testimonials ─────────────────────────────────────────────────
     if (req.method === 'GET' && url === '/api/testimonials') {
       try {
-        // Caché de 10 minutos para testimonios (cambian poco)
-        res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200')
+        // Sin caché — los testimonios pueden cambiar desde el admin
+        res.setHeader('Cache-Control', 'no-store')
         
         const db = await getDb()
         const testimonials = await db.collection('testimonials').find({}).sort({ createdAt: -1 }).toArray()
@@ -426,8 +426,8 @@ export default async function handler(req, res) {
     // Listado optimizado: solo campos necesarios para tarjetas de tours
     if (req.method === 'GET' && url === '/api/tours') {
       try {
-        // Agregar caché de 5 minutos para reducir tráfico
-        res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+        // Sin caché — los tours cambian frecuentemente desde el admin
+        res.setHeader('Cache-Control', 'no-store')
         
         const db = await getDb()
         
@@ -481,8 +481,8 @@ export default async function handler(req, res) {
     // Detalle completo de un tour específico (incluye todo)
     if (req.method === 'GET' && url.startsWith('/api/tours/') && url.split('/').length === 4) {
       try {
-        // Caché de 5 minutos para detalles de tour
-        res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+        // Sin caché — el detalle puede cambiar desde el admin
+        res.setHeader('Cache-Control', 'no-store')
         
         const id = url.split('/').pop()
         const db = await getDb()
