@@ -1919,7 +1919,7 @@ function SeasonCard({ name, icon, color, description, discount, isActive, onAppl
 
 function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
   const [activeFormTab, setActiveFormTab] = useState<'basic' | 'details' | 'itinerary' | 'media'>('basic')
-  const [coverImageTab, setCoverImageTab] = useState<'url' | 'upload' | 'drive'>('url')
+  const [coverImageTab, setCoverImageTab] = useState<'local' | 'drive'>('local')
   const [coverImagePreview, setCoverImagePreview] = useState<string>('')
   
   const [formData, setFormData] = useState<Partial<Tour>>(() => {
@@ -2133,8 +2133,8 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
 interface BasicInfoFormProps {
   formData: Partial<Tour>
   setFormData: React.Dispatch<React.SetStateAction<Partial<Tour>>>
-  coverImageTab: 'url' | 'upload' | 'drive'
-  setCoverImageTab: (tab: 'url' | 'upload' | 'drive') => void
+  coverImageTab: 'local' | 'drive'
+  setCoverImageTab: (tab: 'local' | 'drive') => void
   coverImagePreview: string
   setCoverImagePreview: (v: string) => void
 }
@@ -2254,130 +2254,107 @@ function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab,
 
         {/* Tabs de método */}
         <div className="flex gap-1 mb-3 bg-gray-100 p-1 rounded-lg w-fit">
-          {(['url', 'upload', 'drive'] as const).map((tab) => (
+          {(['local', 'drive'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
-              onClick={() => setCoverImageTab(tab)}
+              onClick={() => setCoverImageTab(tab as any)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 coverImageTab === tab
                   ? 'bg-white shadow text-brand-teal'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'url' ? '🔗 URL' : tab === 'upload' ? '📁 Archivo' : '📂 Drive'}
+              {tab === 'local' ? '📁 Ruta local' : '📂 URL / Drive'}
             </button>
           ))}
         </div>
 
-        {/* URL directa */}
-        {coverImageTab === 'url' && (
-          <input
-            type="text"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
-            placeholder="https://ejemplo.com/imagen.jpg  ó  /public/carpeta/imagen.jpg"
-          />
-        )}
-
-        {/* Subir archivo local */}
-        {coverImageTab === 'upload' && (
-          <div className="space-y-2">
-            <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-teal transition-colors cursor-pointer"
-              onClick={() => document.getElementById('cover-image-upload')?.click()}
-            >
+        {/* Ruta local: selector de carpeta + archivo */}
+        {coverImageTab === 'local' && (
+          <div className="space-y-3">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-600">Selecciona una carpeta y escribe el nombre del archivo:</p>
+              {/* Selector de carpeta */}
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal bg-white"
+                  onChange={(e) => {
+                    const folder = e.target.value
+                    if (!folder) return
+                    // Prerellenar el input con la carpeta seleccionada
+                    const current = formData.image || ''
+                    const filename = current.split('/').pop() || ''
+                    setFormData(prev => ({ ...prev, image: `/${folder}/${filename}` }))
+                  }}
+                  defaultValue=""
+                >
+                  <option value="">— Elegir carpeta —</option>
+                  {['Autisha','AyacuchoSemanaSanta','CarnavalesCajamarca','Churin','Cusco',
+                    'Huancaya','ICA','Laraos','LomasLachay','Lunahuana','MancoraAnoNuevo',
+                    'NevadoRajuntay','NevadoRaura','Otao','OxapampaSelva','PlayaMina',
+                    'team','TingoMaria','Vichaycocha'].map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Input ruta completa */}
               <input
-                id="cover-image-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0]
-                  if (!file) return
-                  if (!file.type.startsWith('image/')) {
-                    alert('Solo se permiten imágenes')
-                    return
-                  }
-                  if (file.size > 2 * 1024 * 1024) {
-                    alert(`Archivo muy grande (${(file.size/1024/1024).toFixed(2)}MB). Máximo 2MB.`)
-                    return
-                  }
-                  const reader = new FileReader()
-                  reader.onload = (ev) => {
-                    setFormData(prev => ({ ...prev, image: ev.target?.result as string }))
-                    setCoverImagePreview(ev.target?.result as string)
-                  }
-                  reader.readAsDataURL(file)
-                }}
+                type="text"
+                value={formData.image || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal font-mono"
+                placeholder="/Autisha/DSC_0365332.jpg"
               />
-              {coverImagePreview || formData.image?.startsWith('data:') ? (
-                <div className="space-y-2">
-                  <img
-                    src={coverImagePreview || formData.image}
-                    alt="Preview portada"
-                    className="max-h-32 mx-auto rounded-lg object-contain"
-                  />
-                  <p className="text-xs text-green-600 font-semibold">✓ Imagen cargada — click para cambiar</p>
-                </div>
-              ) : (
-                <div className="py-4">
-                  <svg className="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-sm text-gray-600 font-medium">Click para subir imagen</p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG (máx. 2MB)</p>
-                </div>
-              )}
+              <p className="text-xs text-gray-400">Ej: <span className="font-mono">/Autisha/DSC_0365332.jpg</span></p>
             </div>
           </div>
         )}
 
-        {/* URL de Google Drive */}
+        {/* URL directa o Google Drive */}
         {coverImageTab === 'drive' && (
           <div className="space-y-2">
             <input
               type="text"
-              placeholder="Pega el enlace de Google Drive aquí..."
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+              value={formData.image || ''}
               onChange={(e) => {
                 const raw = e.target.value.trim()
-                // Convertir link de Drive a link directo de imagen
+                // Si es link de Drive, extraer ID y convertir a URL directa
                 const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)
                 if (match) {
                   const id = match[1]
-                  const direct = `https://drive.google.com/uc?export=view&id=${id}`
-                  setFormData(prev => ({ ...prev, image: direct }))
-                } else if (raw.startsWith('http')) {
+                  setFormData(prev => ({ ...prev, image: `https://lh3.googleusercontent.com/d/${id}` }))
+                } else {
                   setFormData(prev => ({ ...prev, image: raw }))
                 }
               }}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+              placeholder="https://drive.google.com/file/d/ID/view  ó  https://cualquier-url.com/img.jpg"
             />
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
-              <p className="font-semibold">💡 ¿Cómo usar Google Drive?</p>
+              <p className="font-semibold">💡 Google Drive o cualquier URL pública</p>
               <ol className="list-decimal list-inside space-y-0.5">
                 <li>Sube tu imagen a Google Drive</li>
                 <li>Click derecho → "Obtener enlace"</li>
-                <li>Cambia acceso a <strong>"Cualquier persona con el enlace"</strong></li>
-                <li>Copia y pega el enlace aquí</li>
+                <li>Acceso: <strong>"Cualquier persona con el enlace"</strong></li>
+                <li>Pega el link — se convierte automáticamente</li>
               </ol>
             </div>
-            {formData.image?.includes('drive.google.com') && (
+            {formData.image?.includes('googleusercontent.com') && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-700">
-                ✓ URL de Drive detectada: <span className="font-mono break-all">{formData.image}</span>
+                ✓ URL de Drive lista: <span className="font-mono break-all">{formData.image}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Preview de imagen actual (para URL y Drive) */}
-        {(coverImageTab === 'url' || coverImageTab === 'drive') && formData.image && !formData.image.startsWith('data:') && (
+        {/* Preview de imagen actual */}
+        {formData.image && !formData.image.startsWith('data:') && (
           <div className="mt-2">
             <img
               src={formData.image}
               alt="Preview"
-              className="h-20 w-auto rounded-lg object-cover border border-gray-200"
+              className="h-24 w-auto rounded-lg object-cover border border-gray-200"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           </div>
@@ -3641,30 +3618,45 @@ interface MediaFormProps {
 
 function MediaForm({ formData, setFormData }: MediaFormProps) {
   const [newImageUrl, setNewImageUrl] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState('')
+  const [newImageDrive, setNewImageDrive] = useState('')
+  const [galleryTab, setGalleryTab] = useState<'local' | 'drive'>('local')
+  const [selectedFolder, setSelectedFolder] = useState('')
+
+  const PUBLIC_FOLDERS = [
+    'Autisha','AyacuchoSemanaSanta','CarnavalesCajamarca','Churin','Cusco',
+    'Huancaya','ICA','Laraos','LomasLachay','Lunahuana','MancoraAnoNuevo',
+    'NevadoRajuntay','NevadoRaura','Otao','OxapampaSelva','PlayaMina',
+    'team','TingoMaria','Vichaycocha'
+  ]
 
   const addImage = () => {
-    if (!newImageUrl.trim()) return
-    const currentImages = formData.images || []
-    setFormData(prev => ({
-      ...prev,
-      images: [...(prev.images || []), newImageUrl.trim()]
-    }))
+    const url = newImageUrl.trim()
+    if (!url) return
+    if (url.startsWith('data:image/')) {
+      alert('❌ No se permiten imágenes Base64. Usa una ruta local o URL.')
+      return
+    }
+    setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }))
     setNewImageUrl('')
   }
 
+  const addDriveImage = () => {
+    const raw = newImageDrive.trim()
+    if (!raw) return
+    const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)
+    const url = match
+      ? `https://lh3.googleusercontent.com/d/${match[1]}`
+      : raw.startsWith('http') ? raw : ''
+    if (!url) { alert('URL inválida'); return }
+    setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }))
+    setNewImageDrive('')
+  }
+
   const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: (prev.images || []).filter((_, i) => i !== index)
-    }))
+    setFormData(prev => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== index) }))
   }
 
   const updateImage = (index: number, value: string) => {
-    const currentImages = formData.images || []
-    const updated = [...currentImages]
-    updated[index] = value
     setFormData(prev => {
       const updated = [...(prev.images || [])]
       updated[index] = value
@@ -3672,129 +3664,8 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
     })
   }
 
-  // Función para convertir archivo a base64 (para almacenamiento local)
-  const handleFileUpload = async (file: File, type: 'pdf' | 'image') => {
-    if (!file) return
-
-    setUploading(true)
-    setUploadProgress(`Procesando ${file.name}...`)
-
-    try {
-      // Verificar tamaño (máx 2MB para localStorage)
-      const maxSize = 2 * 1024 * 1024 // 2MB
-      if (file.size > maxSize) {
-        alert(`El archivo es muy grande (${(file.size / 1024 / 1024).toFixed(2)}MB). Máximo 2MB.\n\nRecomendación: Usa un servicio como Cloudinary o ImgBB para archivos grandes.`)
-        setUploading(false)
-        setUploadProgress('')
-        return
-      }
-
-      const reader = new FileReader()
-      
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string
-        
-        if (type === 'pdf') {
-          setFormData({ ...formData, brochure: base64 })
-          setUploadProgress(`✅ PDF cargado: ${file.name}`)
-        } else {
-          // Comprimir imagen si es muy grande
-          let finalBase64 = base64
-          
-          // Si la imagen base64 es mayor a 500KB, mostrar advertencia
-          const sizeInKB = (base64.length * 3) / 4 / 1024
-          if (sizeInKB > 500) {
-            console.warn(`Imagen grande detectada: ${sizeInKB.toFixed(0)}KB`)
-            setUploadProgress(`⚠️ Imagen grande (${sizeInKB.toFixed(0)}KB). Puede tardar en cargar.`)
-          }
-          
-          setFormData(prev => {
-            const currentImages = prev.images || []
-            return { ...prev, images: [...currentImages, finalBase64] }
-          })
-          setUploadProgress(`✅ Imagen agregada: ${file.name}`)
-        }
-        
-        setTimeout(() => {
-          setUploading(false)
-          setUploadProgress('')
-        }, 2000)
-      }
-
-      reader.onerror = () => {
-        alert('Error al leer el archivo')
-        setUploading(false)
-        setUploadProgress('')
-      }
-
-      reader.readAsDataURL(file)
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      alert('Error al cargar el archivo')
-      setUploading(false)
-      setUploadProgress('')
-    }
-  }
-
-  // Función para subir a Cloudinary (requiere configuración)
-  const uploadToCloudinary = async (file: File, type: 'pdf' | 'image') => {
-    const cloudName = 'DEMO' // Cambiar por el cloud name real
-    const uploadPreset = 'ml_default' // Cambiar por el upload preset real
-    
-    setUploading(true)
-    setUploadProgress(`Subiendo ${file.name} a Cloudinary...`)
-
-    const uploadFormData = new FormData()
-    uploadFormData.append('file', file)
-    uploadFormData.append('upload_preset', uploadPreset)
-
-    try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/${type === 'pdf' ? 'raw' : 'image'}/upload`,
-        {
-          method: 'POST',
-          body: uploadFormData,
-        }
-      )
-
-      const data = await response.json()
-
-      if (data.secure_url) {
-        if (type === 'pdf') {
-          setFormData(prev => ({ ...prev, brochure: data.secure_url }))
-        } else {
-          setFormData(prev => {
-            const currentImages = prev.images || []
-            return { ...prev, images: [...currentImages, data.secure_url] }
-          })
-        }
-        setUploadProgress(`✅ Archivo subido exitosamente`)
-        setTimeout(() => {
-          setUploading(false)
-          setUploadProgress('')
-        }, 2000)
-      } else {
-        throw new Error('No se recibió URL del archivo')
-      }
-    } catch (error) {
-      console.error('Error uploading to Cloudinary:', error)
-      alert('Error al subir a Cloudinary. Verifica tu configuración o usa la opción de carga local.')
-      setUploading(false)
-      setUploadProgress('')
-    }
-  }
-
   return (
     <div className="space-y-6">
-      {/* Upload Progress */}
-      {uploadProgress && (
-        <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 flex items-center gap-3">
-          {uploading && (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-          )}
-          <span className="text-sm text-blue-800 font-medium">{uploadProgress}</span>
-        </div>
-      )}
 
       {/* Brochure PDF */}
       <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-6 border-2 border-red-200">
@@ -3806,92 +3677,33 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-gray-900 mb-1">📄 Brochure PDF del paquete</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Sube el archivo PDF con la información completa del paquete
-            </p>
-
-            {/* Upload Button */}
-            <div className="mb-3">
-              <label className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors w-fit">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span className="font-semibold text-sm">Seleccionar PDF</span>
-                </div>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleFileUpload(file, 'pdf')
-                  }}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-
-            {/* Or Manual URL */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-red-300"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-red-50 px-2 text-gray-500">o ingresa URL manualmente</span>
-              </div>
-            </div>
-
+            <p className="text-sm text-gray-600 mb-3">Ruta local o URL pública del PDF</p>
             <input
               type="text"
               value={formData.brochure || ''}
               onChange={(e) => setFormData({ ...formData, brochure: e.target.value })}
-              className="w-full px-4 py-2 border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white mt-3"
-              placeholder="https://... o /brochures/nombre.pdf"
+              className="w-full px-4 py-2 border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm"
+              placeholder="/brochures/nombre.pdf  ó  https://drive.google.com/..."
             />
           </div>
         </div>
-
         {formData.brochure && (
-          <div className="mt-4 p-3 bg-white rounded-lg border border-red-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
-                </svg>
-                <span className="text-sm font-medium text-gray-700 truncate max-w-xs">
-                  {formData.brochure.substring(0, 50)}...
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {formData.brochure.startsWith('http') && (
-                  <a
-                    href={formData.brochure}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-red-600 hover:text-red-700 font-semibold"
-                  >
-                    Ver PDF →
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, brochure: '' })}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+          <div className="mt-2 p-3 bg-white rounded-lg border border-red-200 flex items-center justify-between">
+            <span className="text-sm text-gray-700 truncate max-w-xs font-mono">{formData.brochure}</span>
+            <div className="flex gap-2 shrink-0">
+              {formData.brochure.startsWith('http') && (
+                <a href={formData.brochure} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-red-600 hover:text-red-700 font-semibold">Ver →</a>
+              )}
+              <button type="button" onClick={() => setFormData({ ...formData, brochure: '' })}
+                className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
             </div>
           </div>
         )}
       </div>
 
       {/* Image Folder Browser */}
-      <ImageFolderBrowser 
-        formData={formData}
-        setFormData={setFormData}
-      />
+      <ImageFolderBrowser formData={formData} setFormData={setFormData} />
 
       {/* Gallery Images */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">
@@ -3902,108 +3714,102 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
           <div className="flex-1">
             <h3 className="font-bold text-gray-900 mb-1">🖼️ Galería de imágenes</h3>
             <p className="text-sm text-gray-600 mb-3">
-              Agrega múltiples imágenes que se mostrarán en el carrusel del paquete
+              Imágenes del carrusel — sin Base64, solo rutas o URLs
             </p>
 
-            {/* Upload Button */}
-            <div className="mb-3">
-              <label className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors w-fit">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="font-semibold text-sm">Seleccionar Imágenes</span>
+            {/* Tabs */}
+            <div className="flex gap-1 mb-3 bg-white/70 p-1 rounded-lg w-fit border border-blue-200">
+              {(['local', 'drive'] as const).map(tab => (
+                <button key={tab} type="button"
+                  onClick={() => setGalleryTab(tab)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    galleryTab === tab ? 'bg-blue-500 text-white shadow' : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {tab === 'local' ? '📁 Ruta local' : '📂 URL / Drive'}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: ruta local */}
+            {galleryTab === 'local' && (
+              <div className="space-y-2 mb-4">
+                <div className="flex gap-2">
+                  <select
+                    className="px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={selectedFolder}
+                    onChange={(e) => setSelectedFolder(e.target.value)}
+                  >
+                    <option value="">— Carpeta —</option>
+                    {PUBLIC_FOLDERS.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    onFocus={() => {
+                      if (selectedFolder && !newImageUrl.startsWith(`/${selectedFolder}/`)) {
+                        setNewImageUrl(`/${selectedFolder}/`)
+                      }
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImage() } }}
+                    className="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-mono"
+                    placeholder="/Autisha/DSC_0365332.jpg"
+                  />
+                  <button type="button" onClick={addImage}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || [])
-                    files.forEach(file => handleFileUpload(file, 'image'))
-                  }}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-
-            {/* Or Manual URL */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-blue-300"></div>
+                <p className="text-xs text-gray-400">Ej: <span className="font-mono">/Autisha/DSC_0365332.jpg</span></p>
               </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-blue-50 px-2 text-gray-500">o ingresa URL manualmente</span>
-              </div>
-            </div>
-            
-            <div className="flex gap-2 mt-3 mb-4">
-              <input
-                type="text"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addImage()
-                  }
-                }}
-                className="flex-1 px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                placeholder="https://... o /carpeta/imagen.jpg"
-              />
-              <button
-                type="button"
-                onClick={addImage}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
+            )}
 
-            {/* Images List */}
+            {/* Tab: URL / Drive */}
+            {galleryTab === 'drive' && (
+              <div className="space-y-2 mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newImageDrive}
+                    onChange={(e) => setNewImageDrive(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDriveImage() } }}
+                    className="flex-1 px-3 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                    placeholder="https://drive.google.com/file/d/ID/view  ó  https://..."
+                  />
+                  <button type="button" onClick={addDriveImage}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-xs text-blue-600">El link de Drive se convierte automáticamente a URL directa</p>
+              </div>
+            )}
+
+            {/* Lista de imágenes */}
             {(formData.images || []).length > 0 ? (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-gray-600 mb-2">
                   {formData.images?.length || 0} imagen(es) en la galería
                 </p>
                 {(formData.images || []).map((img, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-white p-3 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors">
-                    <div className="relative w-16 h-16 flex-shrink-0 bg-gray-50 rounded overflow-hidden">
-                      <img 
-                        src={img} 
-                        alt={`Imagen ${i + 1}`} 
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onLoad={(e) => {
-                          // Imagen cargada correctamente
-                          const container = (e.target as HTMLImageElement).parentElement
-                          if (container) container.style.backgroundColor = 'transparent'
-                        }}
+                  <div key={i} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-blue-200 hover:border-blue-400 transition-colors">
+                    <div className="w-14 h-14 flex-shrink-0 bg-gray-50 rounded overflow-hidden">
+                      <img src={img} alt={`Imagen ${i + 1}`} className="w-full h-full object-cover" loading="lazy"
                         onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          const container = target.parentElement
-                          if (container) {
-                            container.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-red-50 border-2 border-dashed border-red-300 text-red-500 text-xs font-bold">❌</div>'
-                          }
-                          console.error('❌ Error cargando imagen:', img.substring(0, 80))
+                          const t = e.target as HTMLImageElement
+                          t.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-red-50 text-red-500 text-xs font-bold">❌</div>'
                         }}
                       />
                     </div>
                     <input
                       type="text"
-                      value={img.substring(0, 60)}
+                      value={img}
                       onChange={(e) => updateImage(i, e.target.value)}
-                      className="flex-1 px-2 py-1 text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded border border-transparent hover:border-blue-200"
+                      className="flex-1 px-2 py-1 text-xs bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded border border-transparent hover:border-blue-200 font-mono truncate"
                       title={img}
-                      placeholder="URL o base64 de la imagen"
                     />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"
-                      title="Eliminar imagen"
-                    >
+                    <button type="button" onClick={() => removeImage(i)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors shrink-0">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -4011,41 +3817,24 @@ function MediaForm({ formData, setFormData }: MediaFormProps) {
               </div>
             ) : (
               <div className="text-center py-6 bg-white rounded-lg border-2 border-dashed border-blue-300">
-                <ImageIcon className="w-12 h-12 text-blue-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No hay imágenes en la galería</p>
-                <p className="text-xs text-gray-400 mt-1">Sube imágenes usando el botón de arriba</p>
+                <ImageIcon className="w-10 h-10 text-blue-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Sin imágenes en la galería</p>
+                <p className="text-xs text-gray-400 mt-1">Agrega rutas locales o URLs de Drive</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Info Box */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4">
-        <div className="flex gap-3">
-          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="text-sm text-purple-900">
-            <p className="font-bold mb-2">💡 Opciones de almacenamiento:</p>
-            <div className="space-y-2 text-xs">
-              <div className="bg-white/50 rounded p-2">
-                <p className="font-semibold text-purple-800">✅ Opción 1: Carga directa (Recomendado para pruebas)</p>
-                <p className="text-purple-700 mt-1">Los archivos se convierten a Base64 y se guardan en el navegador. Límite: 2MB por archivo.</p>
-              </div>
-              <div className="bg-white/50 rounded p-2">
-                <p className="font-semibold text-purple-800">✅ Opción 2: Cloudinary (Producción)</p>
-                <p className="text-purple-700 mt-1">Crea cuenta gratis en <a href="https://cloudinary.com" target="_blank" className="underline font-semibold">cloudinary.com</a> (25GB gratis). Configura las credenciales en el código.</p>
-              </div>
-              <div className="bg-white/50 rounded p-2">
-                <p className="font-semibold text-purple-800">✅ Opción 3: URL externa</p>
-                <p className="text-purple-700 mt-1">Sube a Google Drive, Dropbox o cualquier servicio y pega el link público.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Info */}
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-xs text-green-800">
+        <p className="font-bold mb-1">✅ Formatos aceptados</p>
+        <ul className="space-y-0.5 list-disc list-inside">
+          <li><span className="font-mono">/Autisha/imagen.jpg</span> — ruta local (carpeta en /public)</li>
+          <li><span className="font-mono">https://lh3.googleusercontent.com/d/ID</span> — Google Drive</li>
+          <li>Cualquier URL pública de imagen</li>
+        </ul>
+        <p className="mt-2 text-red-700 font-semibold">❌ Base64 bloqueado — no se guardan en MongoDB</p>
       </div>
     </div>
   )
