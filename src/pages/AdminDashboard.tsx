@@ -2128,6 +2128,127 @@ function TourFormModal({ tour, onClose, onSave }: TourFormModalProps) {
 }
 
 
+// ─── Drive Image Picker ───────────────────────────────────────────────────────
+
+const API_URL_DRIVE = (import.meta as any).env?.VITE_API_URL || ''
+
+interface DriveImagePickerProps {
+  value: string
+  onChange: (url: string) => void
+}
+
+function DriveImagePicker({ value, onChange }: DriveImagePickerProps) {
+  const [folderInput, setFolderInput] = useState('')
+  const [images, setImages] = useState<{ id: string; name: string; url: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const extractFolderId = (raw: string) => {
+    // https://drive.google.com/drive/folders/FOLDER_ID
+    const m1 = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)
+    if (m1) return m1[1]
+    // ID directo
+    if (/^[a-zA-Z0-9_-]{10,}$/.test(raw.trim())) return raw.trim()
+    return null
+  }
+
+  const listFolder = async () => {
+    const folderId = extractFolderId(folderInput)
+    if (!folderId) { setError('Link o ID de carpeta inválido'); return }
+    setLoading(true)
+    setError('')
+    setImages([])
+    try {
+      const res = await fetch(`${API_URL_DRIVE}/api/drive/folder?id=${folderId}`)
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Error al listar carpeta')
+      setImages(data.images)
+      if (data.images.length === 0) setError('La carpeta está vacía o no tiene imágenes')
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Input carpeta o URL directa */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={folderInput}
+          onChange={(e) => setFolderInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); listFolder() } }}
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+          placeholder="https://drive.google.com/drive/folders/ID  ó  URL directa de imagen"
+        />
+        <button type="button" onClick={listFolder} disabled={loading}
+          className="px-3 py-2 bg-brand-teal text-white rounded-lg text-sm font-semibold hover:bg-brand-teal/90 disabled:opacity-50 transition-colors whitespace-nowrap">
+          {loading ? '⏳' : '📂 Listar'}
+        </button>
+      </div>
+
+      {/* También acepta URL directa */}
+      <div className="flex gap-2 items-center">
+        <span className="text-xs text-gray-400 shrink-0">O pega URL directa:</span>
+        <input
+          type="text"
+          value={value.includes('googleusercontent') || value.startsWith('http') ? value : ''}
+          onChange={(e) => {
+            const raw = e.target.value.trim()
+            const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)
+            if (match) {
+              onChange(`https://lh3.googleusercontent.com/d/${match[1]}`)
+            } else {
+              onChange(raw)
+            }
+          }}
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-teal font-mono"
+          placeholder="https://drive.google.com/file/d/ID/view"
+        />
+      </div>
+
+      {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+
+      {/* Grid de imágenes de la carpeta */}
+      {images.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-600 mb-2">{images.length} imágenes — click para seleccionar:</p>
+          <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+            {images.map(img => (
+              <button key={img.id} type="button"
+                onClick={() => onChange(img.url)}
+                className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square ${
+                  value === img.url ? 'border-brand-teal shadow-md scale-95' : 'border-transparent hover:border-gray-300'
+                }`}
+                title={img.name}
+              >
+                <img src={img.url} alt={img.name} className="w-full h-full object-cover" loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).src = '' }}
+                />
+                {value === img.url && (
+                  <div className="absolute inset-0 bg-brand-teal/20 flex items-center justify-center">
+                    <span className="text-brand-teal text-xl font-bold">✓</span>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Preview seleccionada */}
+      {value && !value.startsWith('data:') && (
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-2">
+          <img src={value} alt="Seleccionada" className="h-12 w-12 object-cover rounded" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+          <span className="text-xs text-green-700 font-mono break-all flex-1">{value}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Basic Info Form ──────────────────────────────────────────────────────────
 
 interface BasicInfoFormProps {
@@ -2313,39 +2434,10 @@ function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab,
 
         {/* URL directa o Google Drive */}
         {coverImageTab === 'drive' && (
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={formData.image || ''}
-              onChange={(e) => {
-                const raw = e.target.value.trim()
-                // Si es link de Drive, extraer ID y convertir a URL directa
-                const match = raw.match(/\/d\/([a-zA-Z0-9_-]+)/)
-                if (match) {
-                  const id = match[1]
-                  setFormData(prev => ({ ...prev, image: `https://lh3.googleusercontent.com/d/${id}` }))
-                } else {
-                  setFormData(prev => ({ ...prev, image: raw }))
-                }
-              }}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
-              placeholder="https://drive.google.com/file/d/ID/view  ó  https://cualquier-url.com/img.jpg"
-            />
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
-              <p className="font-semibold">💡 Google Drive o cualquier URL pública</p>
-              <ol className="list-decimal list-inside space-y-0.5">
-                <li>Sube tu imagen a Google Drive</li>
-                <li>Click derecho → "Obtener enlace"</li>
-                <li>Acceso: <strong>"Cualquier persona con el enlace"</strong></li>
-                <li>Pega el link — se convierte automáticamente</li>
-              </ol>
-            </div>
-            {formData.image?.includes('googleusercontent.com') && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-700">
-                ✓ URL de Drive lista: <span className="font-mono break-all">{formData.image}</span>
-              </div>
-            )}
-          </div>
+          <DriveImagePicker
+            value={formData.image || ''}
+            onChange={(url) => setFormData(prev => ({ ...prev, image: url }))}
+          />
         )}
 
         {/* Preview de imagen actual */}

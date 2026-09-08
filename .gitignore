@@ -26,3 +26,10 @@ Thumbs.db
 
 # Datos sensibles - Compras
 server/compras.xlsx
+
+# Credenciales Google Service Account
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!postcss.config.json

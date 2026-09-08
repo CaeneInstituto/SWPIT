@@ -669,6 +669,80 @@ export default async function handler(req, res) {
       return json(res, 200, { ok: true })
     }
 
+    // ── GET /api/drive/folder?id=FOLDER_ID ───────────────────────────────────
+    // Lista imágenes de una carpeta de Google Drive usando Service Account
+    if (req.method === 'GET' && url.startsWith('/api/drive/folder')) {
+      const folderId = new URL(req.url, 'http://localhost').searchParams.get('id')
+      if (!folderId) return json(res, 400, { error: 'Falta el parámetro id' })
+
+      const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+      const privateKey   = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+
+      if (!serviceEmail || !privateKey) {
+        return json(res, 500, { error: 'Google Drive API no configurada' })
+      }
+
+      try {
+        // Obtener token de acceso con JWT
+        const now = Math.floor(Date.now() / 1000)
+        const header  = { alg: 'RS256', typ: 'JWT' }
+        const payload = {
+          iss: serviceEmail,
+          scope: 'https://www.googleapis.com/auth/drive.readonly',
+          aud: 'https://oauth2.googleapis.com/token',
+          exp: now + 3600,
+          iat: now,
+        }
+
+        // Importar crypto para firmar el JWT
+        const { createSign } = await import('crypto')
+        const b64u = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url')
+        const unsigned = `${b64u(header)}.${b64u(payload)}`
+        const sign = createSign('RSA-SHA256')
+        sign.update(unsigned)
+        const signature = sign.sign(privateKey, 'base64url')
+        const jwt = `${unsigned}.${signature}`
+
+        // Intercambiar JWT por access token
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            assertion: jwt,
+          }),
+        })
+        const tokenData = await tokenRes.json()
+        if (!tokenData.access_token) {
+          console.error('❌ Error obteniendo token Drive:', tokenData)
+          return json(res, 500, { error: 'No se pudo autenticar con Google Drive' })
+        }
+
+        // Listar archivos de imagen en la carpeta
+        const listUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType+contains+'image/'+and+trashed=false&fields=files(id,name,mimeType)&pageSize=50`
+        const listRes = await fetch(listUrl, {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        })
+        const listData = await listRes.json()
+
+        if (!listData.files) {
+          return json(res, 200, { ok: true, images: [] })
+        }
+
+        // Convertir cada archivo a URL directa
+        const images = listData.files.map(f => ({
+          id: f.id,
+          name: f.name,
+          url: `https://lh3.googleusercontent.com/d/${f.id}`,
+        }))
+
+        return json(res, 200, { ok: true, images })
+      } catch (err) {
+        console.error('❌ Error Drive API:', err.message)
+        return json(res, 500, { error: 'Error al conectar con Google Drive' })
+      }
+    }
+
     // ── 404 ───────────────────────────────────────────────────────────────────
     return json(res, 404, { error: 'Ruta no encontrada' })
 
