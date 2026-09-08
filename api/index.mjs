@@ -573,6 +573,8 @@ export default async function handler(req, res) {
       const tourId = url.split('/').pop()
       const body = await readBody(req)
       
+      console.log(`🔄 PUT /api/tours/${tourId} - name: ${body.name}`)
+      
       // ✅ VALIDACIÓN: Rechazar imágenes Base64
       if (body.image?.startsWith('data:image/')) {
         return json(res, 400, { 
@@ -588,25 +590,27 @@ export default async function handler(req, res) {
       }
       
       const db = await getDb()
-      // Buscar por _id de MongoDB o por campo id (slug)
-      let filter = {}
-      try {
-        filter = { _id: new ObjectId(tourId) }
-      } catch {
-        filter = { id: tourId }
-      }
-
-      const updates = {
-        ...body,  // Spread todos los campos del body
-        updatedAt: new Date(),
-      }
       
-      // Eliminar campos que no deben actualizarse
+      // Siempre buscar por slug (campo id), más confiable que _id en este contexto
+      const updates = { ...body, updatedAt: new Date() }
       delete updates._id
       delete updates.createdAt
       
-      const result = await db.collection('tours').updateOne(filter, { $set: updates })
-      if (result.matchedCount === 0) return json(res, 404, { error: 'Tour no encontrado' })
+      // Primero intentar por slug
+      let result = await db.collection('tours').updateOne({ id: tourId }, { $set: updates })
+      
+      // Si no encontró por slug, intentar por _id
+      if (result.matchedCount === 0) {
+        try {
+          result = await db.collection('tours').updateOne({ _id: new ObjectId(tourId) }, { $set: updates })
+        } catch {
+          // tourId no es un ObjectId válido
+        }
+      }
+      
+      console.log(`🔄 PUT resultado: matchedCount=${result.matchedCount}, modifiedCount=${result.modifiedCount}`)
+      
+      if (result.matchedCount === 0) return json(res, 404, { error: `Tour no encontrado: ${tourId}` })
       return json(res, 200, { ok: true })
     }
 
