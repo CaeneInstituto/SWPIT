@@ -2309,28 +2309,33 @@ function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab,
         <label className="block text-sm font-semibold text-gray-700 mb-2">
           Precio (texto) *
         </label>
-        <input
-          type="text"
-          required
-          value={formData.price}
-          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-          placeholder="Ej: S/ 180"
-        />
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-teal">
+          <span className="px-3 py-2 bg-gray-50 text-gray-500 text-sm font-semibold border-r border-gray-200 shrink-0">
+            Desde S/
+          </span>
+          <input
+            type="number"
+            required
+            min="0"
+            value={formData.priceValue || ''}
+            onChange={(e) => {
+              const val = Number(e.target.value)
+              setFormData({ 
+                ...formData, 
+                priceValue: val,
+                price: `Desde S/ ${val}`
+              })
+            }}
+            className="w-full px-3 py-2 focus:outline-none text-sm"
+            placeholder="180"
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1">Se guardará como: <span className="font-mono text-gray-600">Desde S/ {formData.priceValue || '0'}</span></p>
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Precio (valor numérico) *
-        </label>
-        <input
-          type="number"
-          required
-          value={formData.priceValue}
-          onChange={(e) => setFormData({ ...formData, priceValue: Number(e.target.value) })}
-          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-          placeholder="180"
-        />
+      <div className="hidden">
+        {/* priceValue se actualiza automáticamente junto con price */}
+        <input type="hidden" value={formData.priceValue} />
       </div>
 
       <div>
