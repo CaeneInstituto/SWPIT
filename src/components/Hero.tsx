@@ -2,34 +2,40 @@ import { useState, useEffect, useCallback } from 'react'
 
 const slides = [
   {
-    image: '/Autisha/DSC_0402330.jpg',
-    slogan: 'Recuerdos que trascienden',
-    sub: 'Desde las alturas de los Andes hasta la selva amazónica, cada rincón te espera.',
-    lugar: '📍 Cañón de Autisha',
-  },
-  {
-    image: '/NevadoRajuntay/DSC_0297_copia2.jpg',
-    slogan: 'Aventura en las alturas',
-    sub: 'Nevados, lagunas y paisajes únicos que solo Perú puede ofrecerte.',
-    lugar: '📍 Nevado Rajuntay',
-  },
-  {
-    image: '/LomasLachay/PXL_20250713_143837289.jpg',
-    slogan: 'Naturaleza en su estado puro',
-    sub: 'Lomas, desiertos y oasis que te dejarán sin palabras.',
-    lugar: '📍 Lomas de Lachay',
-  },
-  {
     image: '/ICA/DSC_01915178.JPG',
     slogan: 'El desierto también tiene magia',
-    sub: 'Paracas, Huacachina y las Líneas de Nazca te esperan.',
-    lugar: '📍 Ica - Paracas',
+    sub: 'Paracas, Huacachina y las mejores playas de Ica te esperan.',
+    lugar: '📍 Paracas · Ica',
   },
   {
-    image: '/AyacuchoSemanaSanta/PXL_20240329_203238880.jpg',
+    image: '/Huancaya/DSC_0706000004.JPG',
+    slogan: 'Lagunas que quitan el aliento',
+    sub: 'Huancaya, la joya escondida de Lima. Lagos turquesas en plena sierra.',
+    lugar: '📍 Huancaya',
+  },
+  {
+    image: '/NevadoRaura/PXL_20250525_160133226.jpg',
+    slogan: 'Aventura en las alturas',
+    sub: 'Nevados, lagunas glaciares y paisajes únicos que solo Perú puede ofrecerte.',
+    lugar: '📍 Nevado Raura',
+  },
+  {
+    image: '/Vichaycocha/IMG_20251004_074255.jpg',
+    slogan: 'Paz entre montañas y lagunas',
+    sub: 'Vichaycocha y Azulcocha, destinos escondidos de ensueño.',
+    lugar: '📍 Vichaycocha',
+  },
+  {
+    image: '/MancoraAnoNuevo/IMG_20260426_124833_1.jpg',
+    slogan: 'Sol, playa y arena blanca',
+    sub: 'Máncora, el paraíso del norte peruano para desconectarse del mundo.',
+    lugar: '📍 Máncora',
+  },
+  {
+    image: '/CarnavalesCajamarca/DSC_0058_copia.jpg',
     slogan: 'Cultura viva del Perú profundo',
-    sub: 'Semana Santa en Ayacucho, la celebración más impresionante del país.',
-    lugar: '📍 Ayacucho',
+    sub: 'Los carnavales de Cajamarca, la fiesta más colorida del norte.',
+    lugar: '📍 Cajamarca',
   },
 ]
 
