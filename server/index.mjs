@@ -197,14 +197,141 @@ app.delete('/api/testimonials/:id', async (req, res) => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RUTAS DE TOURS — copiadas de api/index.mjs para usar la conexión db local
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── GET /api/tours ────────────────────────────────────────────────────────────
+app.get('/api/tours', async (_req, res) => {
+  console.log(`📋 GET /api/tours — DB: ${db?.databaseName}`)
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+  try {
+    const tours = await db.collection('tours').find({}).project({
+      _id: 1, id: 1, name: 1, location: 1, region: 1,
+      price: 1, priceValue: 1, days: 1, tag: 1, image: 1,
+      rating: 1, reviewCount: 1, groupSize: 1, disabled: 1,
+      availableDates: 1, priceOptions: 1, seasons: 1,
+    }).sort({ createdAt: -1 }).toArray()
+    console.log(`📋 GET /api/tours — devolviendo ${tours.length} tours`)
+    res.setHeader('Cache-Control', 'no-store')
+    res.json({ ok: true, tours })
+  } catch (err) {
+    console.error('❌ GET /api/tours error:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ── GET /api/tours/:id ────────────────────────────────────────────────────────
+app.get('/api/tours/:id', async (req, res) => {
+  const { id } = req.params
+  console.log(`🔍 GET /api/tours/${id} — DB: ${db?.databaseName}`)
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+  try {
+    let tour = null
+    try { tour = await db.collection('tours').findOne({ _id: new ObjectId(id) }) } catch {}
+    if (!tour) tour = await db.collection('tours').findOne({ id })
+    if (!tour) return res.status(404).json({ error: 'Tour no encontrado' })
+    // Limpiar Base64
+    if (tour.image?.startsWith('data:image/')) tour.image = '/placeholder-tour.jpg'
+    if (tour.images) tour.images = tour.images.filter(img => !img.startsWith('data:image/'))
+    res.setHeader('Cache-Control', 'no-store')
+    res.json({ ok: true, tour })
+  } catch (err) {
+    console.error(`❌ GET /api/tours/${id} error:`, err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ── POST /api/tours ───────────────────────────────────────────────────────────
+app.post('/api/tours', async (req, res) => {
+  console.log(`📥 POST /api/tours — DB: ${db?.databaseName} | Colección: tours`)
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+  const body = req.body
+  console.log(`📥 body.id: ${body.id} | body.name: ${body.name}`)
+
+  if (body.image?.startsWith('data:image/'))
+    return res.status(400).json({ ok: false, error: 'No se permiten imágenes Base64' })
+  if (body.images?.some(img => img.startsWith('data:image/')))
+    return res.status(400).json({ ok: false, error: 'No se permiten imágenes Base64 en galería' })
+  if (!body.id || !body.name)
+    return res.status(400).json({ error: 'Faltan campos requeridos: id, name' })
+
+  try {
+    const existing = await db.collection('tours').findOne({ id: body.id })
+    if (existing) {
+      console.log(`⚠️ Tour duplicado: ${body.id}`)
+      return res.status(409).json({ error: 'Ya existe un tour con ese ID' })
+    }
+    const tour = { ...body, createdAt: new Date(), updatedAt: new Date() }
+    delete tour._id
+    const result = await db.collection('tours').insertOne(tour)
+    console.log(`✅ Tour insertado — insertedId: ${result.insertedId} | name: ${tour.name}`)
+    res.json({ ok: true, id: result.insertedId, tour })
+  } catch (err) {
+    console.error('❌ POST /api/tours insertOne error:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ── PUT /api/tours/:id ────────────────────────────────────────────────────────
+app.put('/api/tours/:id', async (req, res) => {
+  const { id } = req.params
+  const body = req.body
+  console.log(`🔄 PUT /api/tours/${id} — DB: ${db?.databaseName} | name: ${body.name}`)
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+
+  if (body.image?.startsWith('data:image/'))
+    return res.status(400).json({ ok: false, error: 'No se permiten imágenes Base64' })
+  if (body.images?.some(img => img.startsWith('data:image/')))
+    return res.status(400).json({ ok: false, error: 'No se permiten imágenes Base64 en galería' })
+
+  try {
+    const updates = { ...body, updatedAt: new Date() }
+    delete updates._id
+    delete updates.createdAt
+
+    // Buscar primero por slug
+    let result = await db.collection('tours').updateOne({ id }, { $set: updates })
+    // Fallback por ObjectId
+    if (result.matchedCount === 0) {
+      try {
+        result = await db.collection('tours').updateOne({ _id: new ObjectId(id) }, { $set: updates })
+      } catch {}
+    }
+    console.log(`🔄 PUT resultado — matchedCount: ${result.matchedCount} | modifiedCount: ${result.modifiedCount}`)
+    if (result.matchedCount === 0) return res.status(404).json({ error: `Tour no encontrado: ${id}` })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(`❌ PUT /api/tours/${id} error:`, err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ── DELETE /api/tours/:id ─────────────────────────────────────────────────────
+app.delete('/api/tours/:id', async (req, res) => {
+  const { id } = req.params
+  console.log(`🗑️ DELETE /api/tours/${id} — DB: ${db?.databaseName}`)
+  if (!db) return res.status(503).json({ error: 'MongoDB no disponible' })
+  try {
+    let result
+    try { result = await db.collection('tours').deleteOne({ _id: new ObjectId(id) }) } catch {}
+    if (!result || result.deletedCount === 0)
+      result = await db.collection('tours').deleteOne({ id })
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Tour no encontrado' })
+    console.log(`✅ Tour eliminado: ${id}`)
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(`❌ DELETE /api/tours/${id} error:`, err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DELEGACIÓN AL HANDLER DE api/index.mjs
-// Cubre: /api/tours, /api/tours/:id, /api/charge, /api/drive/folder,
-//        /api/uploads, /api/upload
+// Cubre: /api/charge, /api/drive/folder, /api/uploads, /api/upload
+// (tours ya están manejados arriba)
 // ─────────────────────────────────────────────────────────────────────────────
 app.use('/api', (req, res) => {
-  // Express al montar en '/api' elimina ese prefijo de req.url
-  // El handler de api/index.mjs necesita la ruta completa con /api
-  const originalUrl = req.url  // ej: '/tours' o '/tours/lomas-lachay'
+  const originalUrl = req.url
   req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
   console.log(`🔀 Delegando al handler: ${req.method} ${req.url}`)
   apiHandler(req, res)
