@@ -266,7 +266,7 @@ export default function Destinations() {
                   onClick={() => console.log(`🔗 Navigating to tour ID: "${d.id}" | Name: "${d.name}"`)}
                   className="block"
                 >
-                  <div className="relative overflow-hidden h-52 shrink-0">
+                  <div className="relative overflow-hidden h-44 shrink-0">
                     <img
                       src={d.image || '/placeholder.jpg'}
                       alt={d.name}
@@ -274,7 +274,7 @@ export default function Destinations() {
                         const target = e.target as HTMLImageElement;
                         target.src = '/placeholder.jpg';
                       }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className={`absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-full ${tagColors[d.tag] ?? 'bg-gray-500 text-white'}`}>
                       {d.tag || 'Tour'}
