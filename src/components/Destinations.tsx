@@ -281,7 +281,7 @@ export default function Destinations() {
                     </span>
                   </div>
                   <div className="p-5 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-2 min-h-[4.5rem]">
                       <div className="flex-1 min-w-0 pr-2">
                         <h3 className="text-lg font-bold text-gray-900 line-clamp-2 group-hover:text-brand-teal transition-colors">{d.name}</h3>
                         <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
@@ -292,7 +292,11 @@ export default function Destinations() {
                           {d.region || 'Sin región'}
                         </p>
                       </div>
-                      <span className="text-brand-yellow font-bold text-sm shrink-0">{d.price || 'Consultar'}</span>
+                      <span className="text-brand-yellow font-bold text-sm shrink-0 text-right">
+                        {d.price
+                          ? (d.price.toString().includes('S/') ? d.price : `Desde S/ ${d.price}`)
+                          : 'Consultar'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between mt-auto pt-4">
                       <span className="text-xs text-gray-400 flex items-center gap-1">
