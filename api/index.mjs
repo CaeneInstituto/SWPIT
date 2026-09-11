@@ -714,7 +714,7 @@ export default async function handler(req, res) {
         }
 
         // Importar crypto para firmar el JWT
-        const { createSign } = await import('crypto')
+        const { createSign } = await import('node:crypto')
         const b64u = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url')
         const unsigned = `${b64u(header)}.${b64u(payload)}`
         const sign = createSign('RSA-SHA256')

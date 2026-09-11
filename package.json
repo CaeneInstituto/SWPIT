@@ -6,7 +6,7 @@
   "description": "Peru In Travel - LOVI GROUP PERU E.I.R.L. - Plataforma web de agencia de turismo",
   "author": "LOVI GROUP PERU E.I.R.L.",
   "engines": {
-    "node": ">=18.x"
+    "node": ">=20.x"
   },
   "scripts": {
     "dev": "vite",
