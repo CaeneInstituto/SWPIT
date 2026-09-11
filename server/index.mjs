@@ -199,11 +199,14 @@ app.delete('/api/testimonials/:id', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // DELEGACIÓN AL HANDLER DE api/index.mjs
 // Cubre: /api/tours, /api/tours/:id, /api/charge, /api/drive/folder,
-//        /api/uploads, /api/upload, /api/save-purchase (si no llegó arriba)
+//        /api/uploads, /api/upload
 // ─────────────────────────────────────────────────────────────────────────────
 app.use('/api', (req, res) => {
-  // Restaurar req.url con prefijo /api para que el handler lo reconozca
-  req.url = '/api' + (req.url === '/' ? '' : req.url)
+  // Express al montar en '/api' elimina ese prefijo de req.url
+  // El handler de api/index.mjs necesita la ruta completa con /api
+  const originalUrl = req.url  // ej: '/tours' o '/tours/lomas-lachay'
+  req.url = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
+  console.log(`🔀 Delegando al handler: ${req.method} ${req.url}`)
   apiHandler(req, res)
 })
 

@@ -529,6 +529,9 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && url === '/api/tours') {
       const body = await readBody(req)
       
+      console.log(`📥 POST /api/tours - Entrando`)
+      console.log(`📥 body.id: ${body.id} | body.name: ${body.name}`)
+      
       // ✅ VALIDACIÓN: Rechazar imágenes Base64
       if (body.image?.startsWith('data:image/')) {
         return json(res, 400, { 
@@ -549,23 +552,33 @@ export default async function handler(req, res) {
       }
 
       const db = await getDb()
+      console.log(`🍃 DB usada: ${db.databaseName} | Colección: tours`)
+      
       // Verificar que no exista otro tour con el mismo id
       const existing = await db.collection('tours').findOne({ id: body.id })
       if (existing) {
+        console.log(`⚠️ Tour duplicado: ${body.id}`)
         return json(res, 409, { error: 'Ya existe un tour con ese ID' })
       }
 
       // Guardar TODOS los campos del tour (preservar estructura completa)
       const tour = {
-        ...body,  // Guardar todos los campos que vengan
+        ...body,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
       
       // Eliminar _id si viene (MongoDB lo genera automáticamente)
       delete tour._id
-      const result = await db.collection('tours').insertOne(tour)
-      return json(res, 200, { ok: true, id: result.insertedId, tour })
+      
+      try {
+        const result = await db.collection('tours').insertOne(tour)
+        console.log(`✅ Tour insertado — insertedId: ${result.insertedId} | name: ${tour.name}`)
+        return json(res, 200, { ok: true, id: result.insertedId, tour })
+      } catch (insertErr) {
+        console.error(`❌ Error en insertOne:`, insertErr)
+        return json(res, 500, { ok: false, error: insertErr.message })
+      }
     }
 
     // ── PUT /api/tours/:id ────────────────────────────────────────────────────
