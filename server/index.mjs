@@ -201,14 +201,15 @@ app.delete('/api/testimonials/:id', async (req, res) => {
 // Cubre: /api/tours, /api/tours/:id, /api/charge, /api/drive/folder,
 //        /api/uploads, /api/upload, /api/save-purchase (si no llegó arriba)
 // ─────────────────────────────────────────────────────────────────────────────
-app.all('/api/*', (req, res) => {
-  // El handler de api/index.mjs espera req.url con la ruta completa
+app.use('/api', (req, res) => {
+  // Restaurar req.url con prefijo /api para que el handler lo reconozca
+  req.url = '/api' + (req.url === '/' ? '' : req.url)
   apiHandler(req, res)
 })
 
 // ── SPA fallback: devolver index.html para rutas del cliente ──────────────────
 if (existsSync(distPath)) {
-  app.get('*', (_req, res) => {
+  app.get('/{*splat}', (_req, res) => {
     res.sendFile(join(distPath, 'index.html'))
   })
 }
