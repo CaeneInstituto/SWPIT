@@ -759,6 +759,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {activeTab === 'tours' && (
+              <>
               <button
                 onClick={async () => {
                   if (window.confirm('¿Migrar tours originales a MongoDB? Esto NO elimina los tours existentes, solo agrega los que faltan.')) {
@@ -789,6 +790,48 @@ export default function AdminDashboard() {
                 <Database className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Migrar originales</span>
               </button>
+
+              {/* Actualizar tours existentes con datos completos */}
+              <button
+                onClick={async () => {
+                  if (!window.confirm('¿Actualizar todos los tours con datos completos? Sobrescribe itinerario, incluye, notas y precios con los datos originales del código. No elimina tours.')) return
+                  let updated = 0
+                  let created = 0
+                  let failed  = 0
+                  for (const tour of tours) {
+                    try {
+                      const resPut = await fetch(`${API_URL}/api/tours/${tour.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(tour),
+                      })
+                      if (resPut.ok) {
+                        updated++
+                        console.log(`✅ Actualizado: ${tour.name}`)
+                      } else {
+                        const resPost = await fetch(`${API_URL}/api/tours`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(tour),
+                        })
+                        if (resPost.ok) { created++; console.log(`✅ Creado: ${tour.name}`) }
+                        else failed++
+                      }
+                    } catch (e) {
+                      console.error(`❌ Error: ${tour.name}`, e)
+                      failed++
+                    }
+                  }
+                  alert(`✅ ${updated} actualizados · ${created} creados${failed > 0 ? ` · ⚠️ ${failed} fallaron` : ''}`)
+                  window.location.reload()
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
+                title="Actualizar tours existentes con itinerario y datos completos"
+              >
+                <Database className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Actualizar completos</span>
+              </button>
+              </>
             )}
             {activeTab === 'tours' && tourList.length > 0 && (
               <button
@@ -3300,10 +3343,11 @@ function ItineraryForm({ formData, setFormData }: ItineraryFormProps) {
                       <div key={actIndex} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg">
                         <div className="flex flex-col gap-0.5">
                           <input
-                            type="time"
+                            type="text"
                             value={act.time || ''}
                             onChange={(e) => updateActivity(dayIndex, actIndex, 'time', e.target.value)}
                             className="w-24 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-brand-teal"
+                            placeholder="07:30 am"
                           />
                           <span className="text-[10px] text-gray-400 text-center">opcional</span>
                         </div>
