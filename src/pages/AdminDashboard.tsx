@@ -833,16 +833,7 @@ export default function AdminDashboard() {
               </button>
               </>
             )}
-            {activeTab === 'tours' && tourList.length > 0 && (
-              <button
-                onClick={migrateAllTerms}
-                className="flex items-center gap-2 px-4 py-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200"
-                title="Actualizar términos de todos los tours"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Actualizar términos</span>
-              </button>
-            )}
+            
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
