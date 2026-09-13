@@ -794,45 +794,43 @@ export default function AdminDashboard() {
                 <span className="hidden sm:inline text-sm">Migrar originales</span>
               </button>
 
-              {/* Actualizar tours existentes con datos completos */}
+              {/* Actualizar SOLO itinerarios con datos originales */}
               <button
                 onClick={async () => {
-                  if (!window.confirm('¿Actualizar todos los tours con datos completos? Sobrescribe itinerario, incluye, notas y precios con los datos originales del código. No elimina tours.')) return
+                  if (!window.confirm('¿Actualizar solo los itinerarios con los datos originales del código? No toca imágenes ni precios.')) return
                   let updated = 0
-                  let created = 0
                   let failed  = 0
                   for (const tour of tours) {
+                    if (!tour.itinerary || tour.itinerary.length === 0) continue
                     try {
                       const resPut = await fetch(`${API_URL}/api/tours/${tour.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(tour),
+                        body: JSON.stringify({
+                          itinerary:   tour.itinerary,
+                          includes:    tour.includes,
+                          notIncludes: tour.notIncludes,
+                          notes:       tour.notes,
+                          boardingPoints: tour.boardingPoints,
+                          departureDays:  tour.departureDays,
+                          returnTime:     tour.returnTime,
+                        }),
                       })
-                      if (resPut.ok) {
-                        updated++
-                        console.log(`✅ Actualizado: ${tour.name}`)
-                      } else {
-                        const resPost = await fetch(`${API_URL}/api/tours`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(tour),
-                        })
-                        if (resPost.ok) { created++; console.log(`✅ Creado: ${tour.name}`) }
-                        else failed++
-                      }
+                      if (resPut.ok) { updated++; console.log(`✅ Itinerario actualizado: ${tour.name}`) }
+                      else failed++
                     } catch (e) {
                       console.error(`❌ Error: ${tour.name}`, e)
                       failed++
                     }
                   }
-                  alert(`✅ ${updated} actualizados · ${created} creados${failed > 0 ? ` · ⚠️ ${failed} fallaron` : ''}`)
+                  alert(`✅ ${updated} itinerarios actualizados${failed > 0 ? ` · ⚠️ ${failed} fallaron` : ''}`)
                   window.location.reload()
                 }}
                 className="flex items-center gap-2 px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
                 title="Actualizar tours existentes con itinerario y datos completos"
               >
                 <Database className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Actualizar completos</span>
+                <span className="hidden sm:inline text-sm">Actualizar itinerarios</span>
               </button>
               </>
             )}
