@@ -1044,13 +1044,6 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowMigrateBase64Modal(true)}
-                className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
-                title="Convertir imágenes Base64 a rutas de carpetas"
-              >
-                🔄 Migrar Base64
-              </button>
-              <button
                 onClick={() => setShowAddForm(true)}
                 className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
               >
