@@ -139,6 +139,17 @@ export default function Footer() {
               <p>© {new Date().getFullYear()} Peru In Travel. Todos los derechos reservados. RUC: 20606474467</p>
               <p className="text-white/30">Hecho con ❤️ en Perú</p>
             </div>
+            {/* Link créditos — controlado desde admin */}
+            {localStorage.getItem('creditosVisible') !== 'false' && (
+              <div className="text-center mt-3">
+                <a
+                  href="/creditos"
+                  className="text-xs text-white/25 hover:text-white/50 transition-colors"
+                >
+                  Equipo creativo
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </footer>

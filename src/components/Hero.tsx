@@ -26,7 +26,7 @@ const slides = [
     lugar: '📍 Vichaycocha',
   },
   {
-    image: '/MancoraAnoNuevo/IMG_20260426_124833_1.jpg',
+    image: '/MancoraAnoNuevo/WhatsApp_Image_2026-01-02_at_10.39.32_AM_1_-_dr.jpeg',
     slogan: 'Sol, playa y arena blanca',
     sub: 'Máncora, el paraíso del norte peruano para desconectarse del mundo.',
     lugar: '📍 Máncora',

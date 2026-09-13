@@ -9,44 +9,7 @@ interface Testimonial {
   stars: number
 }
 
-// Testimonios por defecto en caso de que la API falle
-const defaultTestimonials: Testimonial[] = [
-  {
-    name: 'María Fernández',
-    location: 'Lima',
-    avatar: 'https://i.pravatar.cc/80?img=47',
-    text: 'La atención fue excelente desde el primer momento. Organizaron todo nuestro viaje de manera profesional y disfrutamos de una experiencia inolvidable. Totalmente recomendados.',
-    stars: 5,
-  },
-  {
-    name: 'José Rodríguez',
-    location: 'Arequipa',
-    avatar: 'https://i.pravatar.cc/80?img=12',
-    text: 'Muy satisfecho con el servicio. El equipo siempre estuvo pendiente de nosotros y cumplió con todo lo prometido. Sin duda volvería a viajar con Peru In Travel.',
-    stars: 5,
-  },
-  {
-    name: 'Carmen Huamán',
-    location: 'Cusco',
-    avatar: 'https://i.pravatar.cc/80?img=32',
-    text: 'Excelente organización y atención personalizada. Todo el itinerario estuvo muy bien coordinado y nos sentimos seguros durante todo el viaje.',
-    stars: 5,
-  },
-  {
-    name: 'Luis Mendoza',
-    location: 'Trujillo',
-    avatar: 'https://i.pravatar.cc/80?img=68',
-    text: 'Una empresa muy seria y responsable. Los tours fueron puntuales, los guías muy amables y la experiencia superó nuestras expectativas.',
-    stars: 5,
-  },
-  {
-    name: 'Andrea Salazar',
-    location: 'Chiclayo',
-    avatar: 'https://i.pravatar.cc/80?img=25',
-    text: 'Fue una experiencia maravillosa. La comunicación fue rápida, el servicio de calidad y cada detalle estuvo perfectamente organizado. Los recomiendo al 100%.',
-    stars: 5,
-  },
-]
+const API_URL = (import.meta as any).env?.VITE_API_URL || ''
 
 function Stars({ count }: { count: number }) {
   return (
@@ -61,8 +24,9 @@ function Stars({ count }: { count: number }) {
 }
 
 export default function Testimonials() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [loading, setLoading] = useState(true)
+  const [visible] = useState(() => localStorage.getItem('testimonialsVisible') !== 'false')
 
   useEffect(() => {
     fetchTestimonials()
@@ -70,26 +34,17 @@ export default function Testimonials() {
 
   const fetchTestimonials = async () => {
     try {
-      const res = await fetch('/api/testimonials')
-      
-      if (!res.ok) {
-        const text = await res.text()
-        console.error(`❌ API /api/testimonials returned ${res.status}:`, text)
-        throw new Error(`API error ${res.status}`)
-      }
-      
+      const res = await fetch(`${API_URL}/api/testimonials`)
+      if (!res.ok) throw new Error(`API error ${res.status}`)
       const data = await res.json()
-      
       if (data.ok && data.testimonials.length > 0) {
         setTestimonials(data.testimonials)
       } else {
-        // Si no hay testimonios en DB, usar los por defecto
-        setTestimonials(defaultTestimonials)
+        setTestimonials([])
       }
     } catch (err) {
       console.error('Error cargando testimonios:', err)
-      // En caso de error, usar testimonios por defecto
-      setTestimonials(defaultTestimonials)
+      setTestimonials([])
     } finally {
       setLoading(false)
     }
@@ -104,6 +59,9 @@ export default function Testimonials() {
       </section>
     )
   }
+
+  // Si no hay testimonios o está oculto, no mostrar la sección
+  if (testimonials.length === 0 || !visible) return null
 
   return (
     <section id="testimonios" className="py-24 bg-gray-50">

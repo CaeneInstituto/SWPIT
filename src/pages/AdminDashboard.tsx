@@ -328,6 +328,9 @@ export default function AdminDashboard() {
   // Testimonials state
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [showTestimonialForm, setShowTestimonialForm] = useState(false)
+  const [testimonialsVisible, setTestimonialsVisible] = useState<boolean>(() => {
+    return localStorage.getItem('testimonialsVisible') !== 'false'
+  })
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
   
   // Purchases state
@@ -841,6 +844,18 @@ export default function AdminDashboard() {
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Cerrar sesión</span>
             </button>
+            {/* Botón ocultar/mostrar link Equipo creativo en footer */}
+            <button
+              onClick={() => {
+                const current = localStorage.getItem('creditosVisible') !== 'false'
+                localStorage.setItem('creditosVisible', String(!current))
+                window.location.reload()
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
+              title="Mostrar/ocultar link 'Equipo creativo' en el footer"
+            >
+              {localStorage.getItem('creditosVisible') === 'false' ? '🔗 Mostrar créditos' : '🔗 Ocultar créditos'}
+            </button>
           </div>
         </div>
         
@@ -1123,13 +1138,29 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-600">
                   Gestiona los testimonios que aparecen en tu página web
                 </p>
-                <button
-                  onClick={() => setShowTestimonialForm(true)}
-                  className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                  Agregar testimonio
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const next = !testimonialsVisible
+                      setTestimonialsVisible(next)
+                      localStorage.setItem('testimonialsVisible', String(next))
+                    }}
+                    className={`flex items-center gap-2 font-semibold px-4 py-2 rounded-lg transition-colors text-sm ${
+                      testimonialsVisible
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {testimonialsVisible ? '👁️ Visible' : '🙈 Oculto'}
+                  </button>
+                  <button
+                    onClick={() => setShowTestimonialForm(true)}
+                    className="flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-d text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Agregar testimonio
+                  </button>
+                </div>
               </div>
             </div>
 
