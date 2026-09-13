@@ -212,25 +212,10 @@ export default function PaymentModal({ onClose }: Props) {
     const isPartialPayment = method === 'yape' || method === 'plin'
     const amountToPay = isPartialPayment ? totalPrice * 0.5 : totalPrice
     
-    // Convertir captura de Yape a base64 si existe
-    let yapeScreenshotBase64 = ''
-    if (method === 'yape' && yapeScreenshot) {
-      try {
-        const reader = new FileReader()
-        yapeScreenshotBase64 = await new Promise((resolve, reject) => {
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(yapeScreenshot)
-        })
-      } catch (error) {
-        console.error('Error convirtiendo imagen:', error)
-      }
-    }
-    
-    // Preparar datos para guardar
+    // Preparar datos para guardar (sin Base64 de captura)
     const purchaseData = {
       name: name || 'Sin especificar',
-      email: method === 'card' ? email : '', // Solo guardar email si es tarjeta
+      email: method === 'card' ? email : '',
       method: methodLabels[method],
       tours: items.map(item => `${item.tourName} (${item.priceOption})`).join('; '),
       totalPersons: (() => {
@@ -245,10 +230,9 @@ export default function PaymentModal({ onClose }: Props) {
       culqiId: '',
       habitacion: habitacion || '',
       comentario: comentario || '',
-      passengers: passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque), // Solo pasajeros con datos
-      // Datos de validación de Yape
+      passengers: passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque),
       yapePhone: method === 'yape' && yapeValidated ? yapePhone : '',
-      yapeScreenshot: method === 'yape' && yapeValidated ? yapeScreenshotBase64 : ''
+      // No guardamos screenshot en BD para evitar sobrecargar con Base64
     }
 
     // Guardar en BD solo para métodos manuales (NO para tarjeta, eso lo hace /api/charge)
@@ -264,52 +248,54 @@ export default function PaymentModal({ onClose }: Props) {
       }
     }
 
-    // Construir mensaje de WhatsApp
-    let message = `🌄 *Reserva Peru In Travel*\n\n`
-    message += `👤 *Cliente:* ${name || '(sin especificar)'}\n`
-    message += `💳 *Método de pago:* ${methodLabels[method]}\n`
+    // Construir mensaje de WhatsApp sin emojis
+    let message = `RESERVA PERU IN TRAVEL\n\n`
+    message += `Cliente: ${name || '(sin especificar)'}\n`
+    message += `Metodo de pago: ${methodLabels[method]}\n`
     
-    // Agregar datos de validación de Yape si aplica
     if (method === 'yape' && yapeValidated) {
-      message += `\n📲 *Datos de Yape:*\n`
-      message += `   • Celular Yape: ${yapePhone}\n`
-      message += `   • Comprobante: Captura adjunta ✓\n`
-      message += `   • Monto yapeado: S/ ${(totalPrice * 0.5).toFixed(2)}\n`
+      message += `\nDATOS DE YAPE:\n`
+      message += `  - Celular Yape: ${yapePhone}\n`
+      message += `  - Monto yapeado: S/ ${(totalPrice * 0.5).toFixed(2)}\n`
+      message += `  - ADJUNTO: captura del comprobante Yape\n`
     }
     
-    message += `\n📦 *Tours reservados:*\n`
+    message += `\nTOURS RESERVADOS:\n`
     items.forEach((item, i) => {
       message += `${i + 1}. ${item.tourName}\n`
-      message += `   📦 Opción: ${item.priceOption}\n`
-      message += `   📅 Fecha de partida: ${item.travelDate}\n`
-      message += `   👥 Personas: ${item.quantity} x ${item.personsPerPackage > 0 ? item.personsPerPackage : 1} = ${item.quantity * (item.personsPerPackage > 0 ? item.personsPerPackage : 1)} persona(s)\n`
-      message += `   💵 Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
+      message += `   Opcion: ${item.priceOption}\n`
+      message += `   Fecha de partida: ${item.travelDate}\n`
+      message += `   Personas: ${item.quantity} x ${item.personsPerPackage > 0 ? item.personsPerPackage : 1} = ${item.quantity * (item.personsPerPackage > 0 ? item.personsPerPackage : 1)} persona(s)\n`
+      message += `   Subtotal: S/ ${(item.priceValue * item.quantity).toFixed(2)}\n\n`
     })
-    message += `💰 *Total paquete: S/ ${totalPrice.toFixed(2)}*\n`
-    message += `💵 *Monto a pagar ahora: S/ ${amountToPay.toFixed(2)}*${isPartialPayment ? ' (50% adelanto)' : ' (pago completo)'}\n`
-    if (isPartialPayment) message += `💰 *Saldo pendiente: S/ ${(totalPrice - amountToPay).toFixed(2)}* (se paga antes del viaje)\n`
-    if (habitacion) message += `🛏️ *Habitación:* ${habitacion}\n`
+    message += `Total paquete: S/ ${totalPrice.toFixed(2)}\n`
+    message += `Monto a pagar ahora: S/ ${amountToPay.toFixed(2)}${isPartialPayment ? ' (50% adelanto)' : ' (pago completo)'}\n`
+    if (isPartialPayment) message += `Saldo pendiente: S/ ${(totalPrice - amountToPay).toFixed(2)} (se paga antes del viaje)\n`
+    if (habitacion) message += `Habitacion: ${habitacion}\n`
     
-    // Agregar datos de pasajeros
     const pasajerosConDatos = passengers.filter(p => p.nombre || p.dni || p.edad || p.telefono || p.embarque)
     if (pasajerosConDatos.length > 0) {
-      message += `\n👥 *Datos de pasajeros:*\n`
+      message += `\nDATOS DE PASAJEROS:\n`
       pasajerosConDatos.forEach((p, i) => {
         message += `${i+1}. ${p.nombre || 'Sin nombre'}`
         if (p.dni) message += ` - DNI: ${p.dni}`
         if (p.edad) message += ` - Edad: ${p.edad}`
         message += `\n`
-        if (p.telefono) message += `   📱 Tel: ${p.telefono}\n`
-        if (p.embarque) message += `   📍 Embarque: ${p.embarque}\n`
+        if (p.telefono) message += `   Tel: ${p.telefono}\n`
+        if (p.embarque) message += `   Embarque: ${p.embarque}\n`
       })
     }
     
-    if (voucherNote) message += `\n📎 *Nota del voucher:* ${voucherNote}\n`
-    if (comentario) message += `💬 *Comentarios adicionales:* ${comentario}\n`
+    if (voucherNote) message += `\nNota del voucher: ${voucherNote}\n`
+    if (comentario) message += `Comentarios: ${comentario}\n`
     
-    message += `\n✅ *Estado:* PENDIENTE CONFIRMACIÓN\n`
-    message += `🕒 *Fecha de solicitud:* ${new Date().toLocaleString('es-PE')}\n\n`
-    message += `Por favor confirmen disponibilidad y envíen datos para el ${methodLabels[method].toLowerCase()}. ¡Gracias! 🙏✨`
+    message += `\nEstado: PENDIENTE CONFIRMACION\n`
+    message += `Fecha de solicitud: ${new Date().toLocaleString('es-PE')}\n\n`
+    if (method === 'yape' || method === 'plin') {
+      message += `IMPORTANTE: Por favor adjuntar la captura del comprobante de pago a este mensaje.`
+    } else {
+      message += `Por favor confirmar disponibilidad y enviar datos de pago. Gracias.`
+    }
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
     
     // Ir a pantalla de éxito en lugar de cerrar directamente
