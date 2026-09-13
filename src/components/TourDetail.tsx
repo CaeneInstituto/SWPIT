@@ -311,10 +311,10 @@ export default function TourDetail() {
 
   // Build tabs dynamically based on available data
   const tabs = [
-    { id: 'itinerary' as const, label: 'Itinerario' },
-    { id: 'includes'  as const, label: 'Incluye / No incluye' },
-    ...(tour.boardingPoints ? [{ id: 'boarding' as const, label: 'Embarque' }] : []),
-    ...(tour.terms         ? [{ id: 'terms'    as const, label: 'Términos' }] : []),
+    { id: 'itinerary' as const, label: 'ITINERARIO' },
+    { id: 'includes'  as const, label: 'INCLUYE / NO INCLUYE' },
+    ...(tour.boardingPoints ? [{ id: 'boarding' as const, label: 'EMBARQUE' }] : []),
+    ...(tour.terms         ? [{ id: 'terms'    as const, label: 'TÉRMINOS' }] : []),
   ]
 
   return (
