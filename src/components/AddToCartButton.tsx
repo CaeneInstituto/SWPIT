@@ -464,7 +464,7 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
       <>
         <button
           onClick={() => setShowModal(true)}
-          className="w-full bg-brand-teal hover:bg-brand-teal-d text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -505,7 +505,7 @@ export default function AddToCartButton({ tour, variant = 'card' }: AddToCartBut
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="w-full bg-brand-gradient text-white font-bold py-4 rounded-xl hover:opacity-90 transition-opacity shadow-md flex items-center justify-center gap-2"
+        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
