@@ -72,20 +72,7 @@ export default function PaymentModal({ onClose }: Props) {
     }
     
     if (!yapeScreenshot) {
-      alert('📱 Por favor sube la captura de pantalla de tu comprobante Yape para continuar')
-      return false
-    }
-    
-    // Validar que sea una imagen
-    if (!yapeScreenshot.type.startsWith('image/')) {
-      alert('Por favor sube un archivo de imagen válido')
-      return false
-    }
-    
-    // Validar tamaño (máximo 5MB)
-    if (yapeScreenshot.size > 5 * 1024 * 1024) {
-      alert('La imagen es demasiado grande. Por favor sube una imagen menor a 5MB')
-      return false
+      // Ya no se requiere screenshot
     }
     
     // Validación exitosa
@@ -257,7 +244,6 @@ export default function PaymentModal({ onClose }: Props) {
       message += `\nDATOS DE YAPE:\n`
       message += `  - Celular Yape: ${yapePhone}\n`
       message += `  - Monto yapeado: S/ ${(totalPrice * 0.5).toFixed(2)}\n`
-      message += `  - ADJUNTO: captura del comprobante Yape\n`
     }
     
     message += `\nTOURS RESERVADOS:\n`
@@ -290,12 +276,8 @@ export default function PaymentModal({ onClose }: Props) {
     if (comentario) message += `Comentarios: ${comentario}\n`
     
     message += `\nEstado: PENDIENTE CONFIRMACION\n`
-    message += `Fecha de solicitud: ${new Date().toLocaleString('es-PE')}\n\n`
-    if (method === 'yape' || method === 'plin') {
-      message += `IMPORTANTE: Por favor adjuntar la captura del comprobante de pago a este mensaje.`
-    } else {
-      message += `Por favor confirmar disponibilidad y enviar datos de pago. Gracias.`
-    }
+    message += `Fecha de solicitud: ${new Date().toLocaleString('es-PE')}\n`
+    message += `Por favor confirmar disponibilidad. Gracias.`
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank')
     
     // Ir a pantalla de éxito en lugar de cerrar directamente
@@ -409,83 +391,12 @@ export default function PaymentModal({ onClose }: Props) {
                     type="tel"
                     value={yapePhone}
                     onChange={(e) => setYapePhone(e.target.value)}
-                    placeholder="999 999 999"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:ring-2 focus:ring-[#6C1DDB] focus:border-transparent"
+                    placeholder="999 999 999"                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg text-center focus:outline-none focus:ring-2 focus:ring-[#6C1DDB] focus:border-transparent"
                     maxLength={11}
                   />
                   <p className="text-xs text-gray-500 mt-1">El mismo número desde donde hiciste el Yape</p>
                 </div>
 
-                <div>
-                  <div className="mb-2 bg-purple-50 border border-purple-200 rounded-xl p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 bg-[#6C1DDB] rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/>
-                        </svg>
-                      </div>
-                      <label className="text-sm font-bold text-purple-800">
-                        📸 Sube tu comprobante Yape *
-                      </label>
-                    </div>
-                    <p className="text-xs text-purple-700 ml-8">
-                      <strong>Importante:</strong> Debe mostrar el monto y destino del pago
-                    </p>
-                  </div>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#6C1DDB] transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleScreenshotUpload}
-                      className="hidden"
-                      id="yape-screenshot"
-                    />
-                    <label htmlFor="yape-screenshot" className="cursor-pointer block">
-                      {yapeScreenshotPreview ? (
-                        <div className="space-y-2">
-                          <div className="relative bg-gray-100 rounded-lg p-2">
-                            <img 
-                              src={yapeScreenshotPreview} 
-                              alt="Preview comprobante" 
-                              className="max-h-60 w-auto mx-auto rounded-lg shadow-lg object-contain"
-                              onError={(e) => {
-                                console.error('Error cargando preview de imagen')
-                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5FcnJvciBjYXJnYW5kbyBpbWFnZW48L3RleHQ+PC9zdmc+'
-                              }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-center gap-2">
-                            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                            </svg>
-                            <p className="text-green-600 font-semibold text-sm">Captura cargada</p>
-                          </div>
-                          <p className="text-xs text-gray-500">Click para cambiar la imagen</p>
-                        </div>
-                      ) : (
-                        <div className="py-8">
-                          <svg className="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="font-semibold text-gray-700">Click para subir captura</p>
-                          <p className="text-xs text-gray-500 mt-1">PNG, JPG o JPEG (máx. 5MB)</p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <svg className="w-3 h-3 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
-                        </svg>
-                      </div>
-                      <p className="text-xs text-amber-700 font-medium">
-                        📱 <strong>¡Importante!</strong> La captura debe mostrar claramente el <strong>monto enviado</strong> y el <strong>número de destino</strong> para validar tu pago.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Instrucciones visuales */}
@@ -1030,6 +941,11 @@ export default function PaymentModal({ onClose }: Props) {
                       <span>Monto a pagar</span><span>S/ {totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
+                  {(method === 'yape' || method === 'plin') && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 text-center font-medium">
+                      Al abrir WhatsApp, recuerda adjuntar la captura de tu comprobante de pago.
+                    </div>
+                  )}
                   <div className="flex gap-3">
                     <button onClick={() => setStep('instructions')} className="flex-1 border border-gray-300 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50">
                       ← Volver
