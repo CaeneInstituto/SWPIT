@@ -4027,32 +4027,32 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-teal-600 text-white p-6 rounded-t-2xl">
+        <div className="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-5 py-4 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-lg font-bold">
                 {testimonial ? 'Editar Testimonio' : 'Agregar Testimonio'}
               </h2>
-              <p className="text-blue-100 text-sm mt-1">
+              <p className="text-blue-100 text-xs mt-0.5">
                 {testimonial ? 'Modifica la información del testimonio' : 'Agrega un nuevo testimonio de cliente'}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Nombre completo *
               </label>
               <input
@@ -4060,13 +4060,13 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: María Fernández"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Ubicación *
               </label>
               <input
@@ -4074,36 +4074,36 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
                 required
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Ej: Lima, Arequipa, Cusco"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
               Testimonio *
             </label>
             <textarea
               required
-              rows={4}
+              rows={3}
               value={formData.text}
               onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Escribe aquí la experiencia del cliente..."
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Calificación (estrellas) *
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Calificación *
               </label>
               <select
                 required
                 value={formData.stars}
                 onChange={(e) => setFormData({ ...formData, stars: Number(e.target.value) })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value={5}>⭐⭐⭐⭐⭐ (5 estrellas)</option>
                 <option value={4}>⭐⭐⭐⭐ (4 estrellas)</option>
@@ -4114,60 +4114,25 @@ function TestimonialFormModal({ testimonial, onClose, onSave }: TestimonialFormM
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL Avatar (opcional)
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                URL Avatar <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
               <input
                 type="url"
                 value={formData.avatar}
                 onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="https://ejemplo.com/avatar.jpg"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Si lo dejas vacío, se generará uno automáticamente
-              </p>
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Vista previa:</p>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <div className="flex gap-0.5 mb-3">
-                {Array.from({ length: formData.stars }).map((_, i) => (
-                  <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-gray-600 text-sm italic mb-3">
-                "{formData.text || 'El testimonio aparecerá aquí...'}"
-              </p>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={formData.avatar || `https://i.pravatar.cc/80?img=47`} 
-                  alt="Avatar" 
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-brand-teal-l" 
-                />
-                <div>
-                  <div className="font-semibold text-gray-900 text-sm">
-                    {formData.name || 'Nombre del cliente'}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    📍 {formData.location || 'Ubicación'}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-2 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
             >
               Cancelar
             </button>
