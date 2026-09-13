@@ -608,6 +608,15 @@ export default async function handler(req, res) {
       const updates = { ...body, updatedAt: new Date() }
       delete updates._id
       delete updates.createdAt
+
+      // ✅ No sobreescribir itinerario si viene vacío — protege datos existentes
+      if (!body.itinerary || body.itinerary.length === 0) {
+        delete updates.itinerary
+      }
+      // ✅ No sobreescribir includes si viene vacío
+      if (!body.includes || body.includes.length === 0) {
+        delete updates.includes
+      }
       
       // Primero intentar por slug
       let result = await db.collection('tours').updateOne({ id: tourId }, { $set: updates })

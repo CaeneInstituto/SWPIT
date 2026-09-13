@@ -1586,11 +1586,11 @@ export default function AdminDashboard() {
         <TourFormModal
           onClose={() => setShowAddForm(false)}
           onSave={async (newTour) => {
-            await saveTours([...tourList, newTour])
-            // Recargar la lista después de guardar
-            const updatedTours = await fetchTours()
-            if (updatedTours.length > 0) {
-              setTourList(updatedTours)
+            // Solo guardar el tour nuevo, no toda la lista
+            const success = await saveTourToAPI(newTour)
+            if (success) {
+              const updatedTours = await fetchTours()
+              if (updatedTours.length > 0) setTourList(updatedTours)
             }
             setShowAddForm(false)
           }}

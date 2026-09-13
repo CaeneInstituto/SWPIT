@@ -289,6 +289,15 @@ app.put('/api/tours/:id', async (req, res) => {
     delete updates._id
     delete updates.createdAt
 
+    // ✅ No sobreescribir itinerario si viene vacío — protege datos existentes
+    if (!body.itinerary || body.itinerary.length === 0) {
+      delete updates.itinerary
+    }
+    // ✅ No sobreescribir includes si viene vacío
+    if (!body.includes || body.includes.length === 0) {
+      delete updates.includes
+    }
+
     // Buscar primero por slug
     let result = await db.collection('tours').updateOne({ id }, { $set: updates })
     // Fallback por ObjectId
