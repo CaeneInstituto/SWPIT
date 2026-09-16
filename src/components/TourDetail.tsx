@@ -352,11 +352,12 @@ export default function TourDetail() {
             <DollarSign className="w-4 h-4 text-brand-teal" />
             <strong className="text-brand-teal">{tour.price}</strong>
           </span>
-          <span className="flex items-center gap-1.5 ml-auto">
+          {/* Rating oculto para público - visible solo en admin */}
+          {/* <span className="flex items-center gap-1.5 ml-auto">
             <Star className="w-4 h-4 text-brand-yellow fill-brand-yellow" />
             <strong>{tour.rating}</strong>
             <span className="text-gray-400">({tour.reviewCount} reseñas)</span>
-          </span>
+          </span> */}
         </div>
       </div>
 
