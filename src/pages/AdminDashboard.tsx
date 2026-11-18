@@ -1609,8 +1609,9 @@ export default function AdminDashboard() {
             }
             const success = await saveTourToAPI(cleanTour)
             if (success) {
-              // Actualizar el tour en la lista local con los datos limpios
-              setTourList(prev => prev.map(t => t.id === cleanTour.id ? { ...t, ...cleanTour } : t))
+              // Recargar lista fresca desde la API para que los IDs queden sincronizados
+              const updatedTours = await fetchTours()
+              if (updatedTours.length > 0) setTourList(updatedTours)
               setEditingTour(null)
             }
           }}
