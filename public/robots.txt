@@ -1,0 +1,10 @@
+# Peru In Travel - Robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.peruintravel.com/sitemap.xml
+
+# Evitar indexación de rutas administrativas
+Disallow: /admin
+Disallow: /api/

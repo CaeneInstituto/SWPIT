@@ -93,41 +93,57 @@ export default function Footer() {
           </div>
 
           <div className="border-t border-white/10 pt-6">
-            {/* Links legales destacados - Requisito CULQI */}
+            {/* Links legales destacados - Requisito CULQI & MINCETUR */}
             <div className="mb-6 pb-6 border-b border-white/10">
-              <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Información Legal</h4>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <h4 className="text-white font-semibold mb-3 text-xs uppercase tracking-wider">Información Legal</h4>
+              
+              {/* Aquí se cambió a md:grid-cols-3 para acomodar perfectamente los 6 botones */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <a 
                   href="/politica-de-privacidad" 
-                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                  className="bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-xs text-white/80 hover:text-white transition-all text-center font-medium flex items-center justify-center"
                 >
-                  <span className="text-lg">📋</span>
-                  <span>Política de Privacidad</span>
+                  Política de Privacidad
                 </a>
+                
                 <a 
                   href="/terminos-y-condiciones" 
-                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                  className="bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-xs text-white/80 hover:text-white transition-all text-center font-medium flex items-center justify-center"
                 >
-                  <span className="text-lg">📄</span>
-                  <span>Términos y Condiciones</span>
+                  Términos y Condiciones
                 </a>
+                
                 <a 
                   href="/politicas-devolucion" 
-                  className="bg-white/5 hover:bg-white/10 px-4 py-3 rounded-lg text-sm text-white/80 hover:text-white transition-all text-left font-medium flex items-center gap-2"
+                  className="bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-xs text-white/80 hover:text-white transition-all text-center font-medium flex items-center justify-center"
                 >
-                  <span className="text-lg">🔄</span>
-                  <span>Políticas de Devolución</span>
+                  Políticas de Devolución
                 </a>
+                
+                <a 
+                  href="/constancia-mincetur" 
+                  className="bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-xs text-white/80 hover:text-white transition-all text-center font-medium flex items-center justify-center"
+                >
+                  Constancia MINCETUR
+                </a>
+
+                <a 
+                  href="/codigo-esnna" 
+                  className="bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg text-xs text-white/80 hover:text-white transition-all text-center font-medium flex items-center justify-center"
+                >
+                  Código de Conducta ESNNA
+                </a>
+                
                 <a 
                   href="/libro-reclamaciones" 
-                  className="bg-red-600/20 hover:bg-red-600/30 border-2 border-red-500/50 hover:border-red-500 px-4 py-3 rounded-lg transition-all flex items-center gap-3 group"
+                  className="bg-red-600/20 hover:bg-red-600/30 border-2 border-red-500/50 hover:border-red-500 px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2 group"
                 >
                   <img 
                     src="/Libroreclamacion.jfif" 
                     alt="Libro de Reclamaciones" 
-                    className="w-12 h-12 object-contain rounded bg-white/90 p-1"
+                    className="w-8 h-8 object-contain rounded bg-white/90 p-0.5"
                   />
-                  <span className="text-sm font-bold text-white group-hover:scale-105 transition-transform text-left leading-tight">
+                  <span className="text-xs font-bold text-white group-hover:scale-105 transition-transform text-center leading-tight">
                     Libro de<br/>Reclamaciones
                   </span>
                 </a>
@@ -139,6 +155,7 @@ export default function Footer() {
               <p>© {new Date().getFullYear()} Peru In Travel. Todos los derechos reservados. RUC: 20606474467</p>
               <p className="text-white/30">Hecho con ❤️ en Perú</p>
             </div>
+            
             {/* Link créditos — controlado desde admin */}
             {localStorage.getItem('creditosVisible') !== 'false' && (
               <div className="text-center mt-3">

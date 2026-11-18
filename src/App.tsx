@@ -12,6 +12,8 @@ import PoliticaPrivacidad from './pages/PoliticaPrivacidad'
 import TerminosCondiciones from './pages/TerminosCondiciones'
 import PoliticasDevolucion from './pages/PoliticasDevolucion'
 import LibroReclamaciones from './pages/LibroReclamaciones'
+import ConstanciaMincetur from './pages/ConstanciaMincetur'
+import CodigoEsnna from './pages/CodigoEsnna'
 import Creditos from './pages/Creditos'
 import NotFound from './pages/NotFound'
 
@@ -31,6 +33,8 @@ export default function App() {
             <Route path="/politica-de-privacidad" element={<PoliticaPrivacidad />} />
             <Route path="/terminos-y-condiciones" element={<TerminosCondiciones />} />
             <Route path="/politicas-devolucion"   element={<PoliticasDevolucion />} />
+            <Route path="/constancia-mincetur"    element={<ConstanciaMincetur />} />
+            <Route path="/codigo-esnna"           element={<CodigoEsnna />} />
             <Route path="/libro-reclamaciones"    element={<LibroReclamaciones />} />
             <Route path="/creditos"               element={<Creditos />} />
             <Route path="*"                       element={<NotFound />} />

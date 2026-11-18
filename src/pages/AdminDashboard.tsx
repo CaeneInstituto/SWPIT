@@ -2327,10 +2327,54 @@ function BasicInfoForm({ formData, setFormData, coverImageTab, setCoverImageTab,
           type="text"
           required
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => {
+            const name = e.target.value
+            // Si el ID aún no fue editado manualmente, generarlo automáticamente desde el nombre
+            const autoId = name.toLowerCase()
+              .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
+              .replace(/[^a-z0-9\s-]/g, '')                    // solo letras, números, guiones
+              .trim()
+              .replace(/\s+/g, '-')                            // espacios → guiones
+            setFormData(prev => ({
+              ...prev,
+              name,
+              // Solo auto-generar si el id está vacío o fue auto-generado antes
+              id: (prev.id === '' || !prev._id) ? autoId : prev.id
+            }))
+          }}
           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
           placeholder="Ej: Machu Picchu 3D/2N"
         />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Slug (URL del tour) *
+        </label>
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-teal">
+          <span className="px-3 py-2 bg-gray-50 text-gray-500 text-sm border-r border-gray-200 shrink-0">
+            /tour/
+          </span>
+          <input
+            type="text"
+            required
+            value={formData.id || ''}
+            onChange={(e) => {
+              const slug = e.target.value
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/-+/g, '-')
+              setFormData(prev => ({ ...prev, id: slug }))
+            }}
+            className="w-full px-3 py-2 text-sm font-mono focus:outline-none"
+            placeholder="machu-picchu-3d-2n"
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          URL final: <span className="font-mono text-brand-teal">/tour/{formData.id || 'slug-del-tour'}</span>
+          {' '}· Solo letras minúsculas, números y guiones.
+        </p>
       </div>
 
       <div>
