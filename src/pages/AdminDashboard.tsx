@@ -241,7 +241,8 @@ async function saveTourToAPI(tour: Tour): Promise<boolean> {
     }
 
     const method = cleanTour._id ? 'PUT' : 'POST'
-    const url = cleanTour._id ? `${API_URL}/api/tours/${cleanTour.id}` : `${API_URL}/api/tours`
+    // Usar _id de MongoDB para el PUT (identificador real en BD), no el slug que puede cambiar
+    const url = cleanTour._id ? `${API_URL}/api/tours/${cleanTour._id}` : `${API_URL}/api/tours`
     
     console.log(`🔄 ${method} request to:`, url)
     console.log('🔄 Tour data:', {
